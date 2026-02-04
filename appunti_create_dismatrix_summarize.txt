@@ -1,0 +1,23 @@
+distances: 
+	mahalanobis, bray_curtis, jaccard, aitchison, ("euclidean", "maximum", "manhattan", "canberra", "binary", "minkowski)
+linkage:
+	ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC)
+sample:
+	core, full
+other: 
+	isclr,
+
+
+possibili pipeline da sfruttare:
+-abbondanze relative, bray-curtis, average/wardd2   (possibilità di fare PCoA?)
+-CLR, (PCA?), euclideo, ward  
+-binary, jaccard, complete/average
+-CLR, (PCA?), mahalanobis, average
+-CLR, (PCA?), whitening, euclideo, average
+
+ognuno con clusnum da 3-10
+
+
+
+
+controllare che whitening + euclideo = mahalanobis

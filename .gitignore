@@ -1,0 +1,8 @@
+*.pdf
+*.rds
+results/*
+dummy.html
+mountemicrain/*
+onedriveEmicrain
+*.png
+.Rhistory
