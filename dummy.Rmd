@@ -1,0 +1,282 @@
+#convertire da R markdown a Rscript
+knitr::purl("purl.Rmd")
+
+
+# commenti così
+"così printa roba"
+name <- "tizio"  # le variabili non hanno tipo all'inizio e non si possono neanche dichiarare all'inizio, esistono quando gli assegno un valore, il valore qua è "tizio" 
+name #per printare un valore di una variabile basta digitarlo, tranne in alcuni casi in cui si usa print (e.g.: nei for loop)
+print(name)
+# per concatenare roba usa paste
+text2 <- "suca"
+text1 <- "merda"
+paste(text2, text1)
+paste(text2, text1, text2)
+
+############## assegnazione valori #########
+#le variabili create fuori sono globali e possono essere usate ovunque, anche dentro le funzioni
+
+var1 <- var2 <- var3 <- "Orange" #Assign the same value to multiple variables in one line
+var1 <- 3 #assegnazione classica usata di solito, prendo 3 e lo metto dentro var1  
+var1 <<- 3   #superassignment: serve per modificare variabili fuori dalla funzione: cerca var1 nell'ambiente padre e se lo trova lo assegna lì, se non lo trova lo crea nella global enviroment e lo assegna lì.
+var1 <- 0
+f <- function() {
+  var1 <- 1
+}
+f()
+var1 #printa 0 
+g <- function() {
+  var1 <<- 1
+}
+g()
+var1 #printa -1
+1->var1 #esiste anche l'incontrario con -> e ->>, ma è poco usato
+var1=1 # esiste anche questo, ma è da evitare perchè è più usato come argomento delle funzioni, fuori da funzioni va come assegnazione (<-), ma può essere misleading !!!
+f <- function(x,y) {
+  var1 <- mean(c(x,y))
+  var1
+}
+print(f(x=1,y=2))
+system("R")#per resettare R nel sistema, così cancella roba fatto prima
+median(x = 1:10) # qua x è definito nell'ambiente della funzione e basta, non fuori
+x  #da errore
+median(x<-1:10) # qua x è definito nel workspace e quindi lo posso usare anche fuori
+x
+
+
+
+# A variable name cannot start with a number or underscore (_)
+# Variable names are case-sensitive (age, Age and AGE are three different variables)
+# in R le variabili possono anche cambiare di tipo
+my_var <- 30 # my_var is type of numeric
+class(my_var)
+my_var <- "Sally" # my_var is now of type character (aka string)
+
+########################### DATA TYPE ##########################
+# numeric - (10.5, 55, 787) è numero
+# integer - (1L, 55L, 100L, where the letter "L" declares this as an integer)
+# complex - (9 + 3i, where "i" is the imaginary part)
+# character (a.k.a. string) - ("k", "R is exciting", "FALSE", "11.5")
+# logical (a.k.a. boolean) - (TRUE or FALSE)
+# We can use the class() function to check the data type of a variable
+class(my_var)
+
+#per convertire usa as
+#as.numeric()  as.integer()  as.complex()
+x <- 45L # integer
+a <- as.numeric(x)
+class(x)
+
+#per stringhe: a capo è \n, posso scrivere direttamente con a capo e lui mette da solo i \n
+#per printare con gli a capo basta usare cat()
+str <- "Lorem ipsum dolor sit amet,
+consectetur adipiscing elit,
+sed do eiusmod tempor incididunt"
+print(str) #printa str con i a capo come \n
+cat(str) #printa str con i a capo veri
+nchar(str) #conta il numero di caratteri
+grepl("dsafasdf", str) #controlla se carattere o sequenza di caratteri è presente
+grepl("Lorem", str) #controlla se carattere o sequenza di caratteri è presente
+
+
+################### operatori  #################
+#oltre ai soliti +-/*, 
+var<- 5^3 #  ^  è esponente
+var%%3  # %% è resto di divisione
+var%/%3 #%/% è divisione intero
+print(var)
+
+c(TRUE, FALSE, TRUE) & c(TRUE, TRUE, FALSE) # & è operatore AND fatto vettoriale, quindi lui controlla ogni coppia del vettore e restituisce un vettore di booleani
+TRUE && TRUE # il && è solo per casi scalari con un elemento vs un elemento
+c(TRUE, FALSE, TRUE) | c(TRUE, TRUE, FALSE)  #stessa cosa con operatore OR
+!TRUE  #operatore not classico
+x<- -1:1  #per creare serie di numeri in sequenza
+x
+x %in% 0 #controllare che elemento sia in vettore, restituisce vettore di true e false, dove true è solo quando lo trova
+matrix<-x %*% x  #moltiplica matrici
+matrix
+
+################ costrutti #################### 
+#if else va come in c++, esistono if, if else e poi else, if dentro if etc.
+#while loop: come in c++, esiste il "break" che interrompe il loop e "next" che è l'equivalente di continue
+#stessa cosa per i for loop
+dice <- c(1, 2, 3, 4, 5, 6)
+for (x in dice) {
+  print(x)
+}
+
+############ funzioni  ############
+#funzione viene definita con la keyword function
+my_function <- function(fname="cazzo", lname="merda") {
+  paste(fname, lname)
+  return ("yeah")  #return è una funzione, ha bisogno delle parentesi
+}
+my_function()
+my_function(fname="Griffin")
+#cose a caso: le funzioni in R restituiscono l'ultima espressione valutata, quindi la funzione sopra ritorna sempre yeah.
+#tipicamente non si mette return se non serve, spesso return serve per uscire da funzione in determinate condizioni
+
+#le variabili create dentro le funzioni sono locali ed esistono solo dentro le funzini.
+#si possono creare o modificare variabili globali con <<-- anche dentro le funzioni
+
+
+##### funzioni a caso  ######
+paste(a,b,c)#per concatenare roba
+print(a )#per printare su schermo
+class(a)#scoprire che tipo di variabile è
+max/min(a,b,c)#restituisce il massmo
+sqrt(a) #radice quadrata
+abs(a) #modulo
+ceiling(a) #arrotonda per eccesso
+floor(a) #arrotonda per difetto
+
+
+###################### data structures  ###################### 
+# Lists : ci puoi mettere cose a caso
+thislist <- list("apple", "banana", 50, 100)
+#puoi usare i stessi metodi di vector, 
+######### Vectors è come lista, ma tutti gli oggetti sono dello stesso tipo
+fruits <- c("banana", "apple", "orange")
+#c per concatenare cose,
+# : per per fare sequenze numeriche con passo 1
+numbers1 <- 1.5:6.5
+numbers2 <- 1.5:6.3 #se l'ultmo non c'è, lo salta, perchè qua va da -1.5 con passo di +1 fino a quando non è oltre l'ultimo
+numbers1
+numbers2
+numbers <- seq(from = 0, to = 10, by = 0.1) #fare vettore con passo diverso
+numbers
+append(numbers,100)#aggiungere elemento 
+removedvector<-numbers[-2] #toglie secondo elemento
+removedvector
+numbers[1:3] #per prendere alcuni elementi
+
+#funzioni utili per vectors:
+length(numbers1) #per lunghezza
+sort(numbers1) #per ordinare
+numbers1[c(1,2)] #per accedere e assegnare, anche più elementi alla volta
+repeat_each <- rep(c(1,2,3), each = 3) #per assegnare ripetendo ogni elemento n volte
+repeat_each
+repeat_times <- rep(c(1,2,3), times = 3) #ripetere vettore n volte
+repeat_times
+repeat_indepent <- rep(c(1,2,3), times = c(5,2,1))
+repeat_indepent
+print(c(repeat_indepent,repeat_each)) #per unire
+max(repeat_each) #massimo
+which.max(repeat_each) #ritorna posizione indice del massimo
+mean(repeat_each) #media, esiste anche mode, median etc.
+quantile(mtcars$wt, c(0.85)) #per avere percentuali, qua uso database già caricato in R chiamato mtcars, prendo voce wt che è peso e chicedo quanto vale il peso che corrisponde fino al 85% delle macchine, va bene anche senza c, 
+
+############# Matrices è come vettore, ma in 2D. Attenzione solo 2D!
+thismatrix <- matrix(c(1,2,3,4,5,6), nrow = 3, ncol = 2)
+#matrici:
+m <- matrix(1:8, nrow=2) #fai matrice di due righe con elementi da 1 a 8 (i conti devono tornare)
+print(m)
+m*2  #moltiplicazione per scalare
+n <- matrix(8:15, nrow=2)
+n
+o<-matrix(8:15, ncol=2)
+o
+print(m*n) # fa moltiplicazinoe elemento per elemento come fossero scalari... no moltirplicazzione vettoriale
+print(m %*% o) # questa è una moltiplicazione vettoriale vera tra matrici
+o[2,1] #accedere ad elemento matrice
+o[2,] #accedere a riga matrice
+o[c(2,1),] #accedere a  più riga matrice
+o
+p<- cbind(o,c(1,2)) #aggiungere colonna, si possono aggiugnere anche matrici (tipo affiancarli)
+p
+p<- rbind(p,c(5,6,7)) # aggiungere riga, idem per matrici
+p
+n <- matrix(8:15, nrow=2)
+n
+n[,-1] #rimuove prima colonna
+n[,-c(1,2,3)] #rimuove più colonne, ma così diventa vettore e R lo fa diventare vettore
+n[,-c(1,2,3), drop=FALSE] #rimuove più colonne, ma lo mantiene come matrice
+5 %in% n #cerca se elemento è presente in matrice
+dim(n) #dimensioni matrice
+length(n) #numero elementi in matrice
+
+#loopare in matrice
+for (rows in 1:nrow(n)) {
+  for (columns in 1:ncol(n)) {
+    print(n[rows, columns])
+  }
+}
+
+
+############## Arrays è come matrix, ma in più dimensioni
+thisarray <- c(1:24) #che poi è un vettore
+thisarray
+# An array with more than one dimension
+multiarray <- array(thisarray, dim = c(4, 3, 2)) #mette ogni elemento di thisarray in un casella del array
+multiarray
+dim(multiarray) #printa la dimensione
+
+############## Data Frames: A data frame is like a table in a spreadsheet. It can hold different types of data across multiple columns
+# Create a data frame
+Data_Frame <- data.frame (
+  Training = c("Strength", "Stamina", "Other"),
+  Pulse = c(100, 150, 120),
+  Duration = c(60, 30, 45)
+)
+Data_Frame
+summary(Data_Frame) #fa riassunto
+names(Data_Frame) #fornisce fornisce la prima riga
+rownames(Data_Frame) #fornisce quello che c'è nella prima colonna
+dplyr::glimpse(ML.data$ann) #fa vedere quello che c'è dentro database, molto comodo e utile per esplorare!!!
+
+#per accedere alla prima colonna chiamata training, 3 metodi uguali
+Data_Frame[1]             
+Data_Frame[["Training"]]
+Data_Frame$Training
+
+
+
+######################## factors ###################
+#Factors are used to categorize data, le entries non sono ripetibili
+music_genre <- factor(c("Jazz", "Rock", "Classic", "Classic", "Pop", "Jazz", "Rock", "Jazz")) 
+music_genre
+levels(music_genre) #ogni categoria è chiamata level
+#you cannot change the value of a specific item if it is not already specified in the factor
+music_genre[3] <- "Opera" #dà errore perchè Opera non c'era 
+
+
+########################   STATISTICS   ########################
+mtcars # è database già caricato di default
+
+
+knitr::purl("heatmap_microbiota_HNC_yun.Rmd", documentation = 2L, output="heatmap_microbiota_HNC_yun.R")
+
+
+##########################  gestione file  ######################
+#posso salvare varie cose in lista con sottovoci etc.
+tobesaved<-list(
+  config=list(
+    clus_method=clus_method,
+    distance=distance,
+    iscore=iscore,
+    isclr=isclr,
+    isrelab=isrelab,
+    whitemethod=whitemethod,
+    zeroimpmethod=zeroimpmethod,
+    inputfile=inputfile
+  )
+)
+
+#posso aggiungere cose dopo
+#aggiungo distmatrix sotto voce results
+tobesaved$results$distmatrix<-distmatrix
+#per salvare:annif(!file.exists(outputname)){
+if(!file.exists(outputname)){
+  saveRDS(tobesaved,file=outputname)
+}else{
+  print("WARNING: file ",outputname," already exists")
+  overwrite<-readline("Do you want to overwrite it? y/n")
+  if(overwrite=="y" || overwrite=="Y"){
+    saveRDS(tobesaved,file=outputname)
+  }
+}
+ 
+#per rileggere file salvato
+tobesaved <- readRDS(nomefile)
+#esplorare file:a
+str(tobesaved)

@@ -1,0 +1,165 @@
+---
+title: "tutorial heatmap microbiota HNC"
+author: "Michele Salerno"
+date: "2026-01-20"
+output: html_document
+---
+
+# Libraries
+
+```{r}
+library(pheatmap)
+```
+
+# Functions
+
+```{r}
+# imputation and clr transformation
+clr_transformation <- function(count_matrix, zero_imputation_method = "GBM") {
+  if (zero_imputation_method == "pseudocount") {
+    count_matrix[count_matrix == 0] <- 1
+    clr_table <- count_matrix
+  } else {
+    clr_table <- zCompositions::cmultRepl(
+      X = count_matrix,
+      method = zero_imputation_method,
+      z.delete = FALSE   
+    )
+  }
+    clr_table <- apply(log(clr_table), 2, function(x) x - mean(x))
+  return(clr_table)
+}
+```
+
+# Import
+
+```{r}
+# load data MicroLearner HNC 16S/ put your path data
+#load("/Users/michelesalerno/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/Microbiota_in_HNC_Causal/data/ML_data_16S_HNC.RData")
+load("https://istitutonazionaledeitumori-my.sharepoint.com/personal/jacopo_iacovacci_istitutotumori_mi_it/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fjacopo%5Fiacovacci%5Fistitutotumori%5Fmi%5Fit%2FDocuments%2FEMICRAIN%2FDatasets%2FMicrolearner%2FHNC%2Fmicrobiome%2F16S&viewid=afc0a39d%2D5525%2D4f3a%2D8065%2D539ae364ae41&sharingv2=true&fromShare=true&at=9&CT=1769081090548&OR=OWA%2DNT%2DMail&CID=47df9aba%2D3549%2Dfeb8%2D6056%2D2243fe4cc2b3&FolderCTID=0x012000B369C4E12EC92A4A99B23E04543EF70C")
+# object ML.data
+```
+
+# Microbiota baseline
+
+```{r}
+ML.dis.baseline.gen <- ML.data$OTU$dis$gen$bas;
+ML.val.baseline.gen <- ML.data$OTU$val$gen$bas;
+
+# Merge discovery and validation dataset
+ML.dis.baseline.gen$genus <- rownames(ML.dis.baseline.gen)
+ML.val.baseline.gen$genus <- rownames(ML.val.baseline.gen)
+ML.baseline.gen <- merge(ML.dis.baseline.gen, ML.val.baseline.gen, by = "genus", all = TRUE)
+rownames(ML.baseline.gen) <- ML.baseline.gen$genus
+ML.baseline.gen$genus <- NULL
+
+ML.baseline.gen[is.na(ML.baseline.gen)] <- 0
+#se una cella ha meno di 10 conteggi assegna 0
+ML.baseline.gen[ML.baseline.gen<10] <- 0 
+# righe/colonne che contengono solo 0 o NA vengono rimosse 
+ML.baseline.gen <- ML.baseline.gen[rowSums(ML.baseline.gen, na.rm = TRUE) > 0,
+                     colSums(ML.baseline.gen, na.rm = TRUE) > 0]
+```
+
+## Core
+
+```{r}
+# relative abundances
+ML.baseline.gen.relab <- (ML.baseline.gen / rep(colSums(ML.baseline.gen), each = nrow(ML.baseline.gen)))*100
+```
+
+
+```{r}
+# Calcolo % di campioni in cui il genere ha ab. relativa ≥ 2%
+core_genus <- rowSums(ML.baseline.gen.relab >= 2) > (round(0.10 * ncol(ML.baseline.gen.relab)))
+# Filtro la matrice rel ab con solo i genus "core"
+ML.baseline.gen.core <- ML.baseline.gen.relab[core_genus, ]
+```
+
+```{r}
+core_genus_list <- rownames(ML.baseline.gen.relab)[core_genus]
+core_genus_list
+```
+
+## Imputation and clr
+
+```{r}
+ML.baseline.gen.core.count <- ML.baseline.gen[core_genus,]
+```
+
+```{r}
+clr <- clr_transformation(ML.baseline.gen.core.count, zero_imputation_method = "CZM")
+```
+
+## z-score
+
+```{r}
+ML.baseline.gen.z <- t(scale(t(clr), center = TRUE, scale = TRUE))
+```
+
+## Clustering
+
+### Ward.d & Mahalanobis
+
+```{r}
+x <- MatchIt::mahalanobis_dist(~ ., t(ML.baseline.gen.z))
+
+#x <- lower.tri(x, diag = FALSE)
+#x <- x[lower.tri(x, diag = F)]
+#x
+
+x_lower <- x * lower.tri(x, diag = FALSE)
+#x_lower
+```
+
+```{r}
+x <- MatchIt::mahalanobis_dist(~ ., t(ML.baseline.gen.z))
+
+d_maha <- as.dist(x)  
+
+# clustering gerarchico
+hcc_bas_maha <- hclust(d_maha, method = "ward.D")
+
+patient_clustering_bas_maha <- cutree(hcc_bas_maha, k = 3)
+table(patient_clustering_bas_maha)
+```
+
+#### Heatmap
+
+```{r}
+color.divisions <- 100
+my_colors <- colorRampPalette(c("navy", "white", "red"))(color.divisions)
+
+# breaks simmetrici attorno a 0
+# max_val <- max(abs(ML.baseline.gen.z), na.rm = TRUE)
+# breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
+max_val <- 4
+breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
+
+g_gen_bas_maha <- pheatmap(
+  ML.baseline.gen.z,
+  color = my_colors,
+  cluster_rows = FALSE,
+  cluster_cols = hcc_bas_maha,   
+  clustering_method = "ward.D",  
+  scale = "none",
+  # annotation_col = annotation_col,
+  breaks = breaks,
+  cutree_cols = 3,
+  show_rownames = TRUE,
+  show_colnames = FALSE,
+  border_color = "black",
+  annotation_colors = annotation_colors,
+  annotation_legend = TRUE,
+  legend = TRUE,
+  na_col = "#DDDDDD"
+)
+
+g_gen_bas_maha
+```
+
+
+
+
+
+
