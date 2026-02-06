@@ -2,32 +2,32 @@
 # possible cluster methods:
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args)==0){
-  clusnum<-3
+  clusnum<-4
 }else{ 
   clusnum <-as.integer(args[1])
 } #clusternum dato da primo argomento
 
 # "ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC).
-clus_method <- "average"
+clus_method <- "ward.D"
 # possible distances:
 # "euclidean", "maximum","manhattan", "canberra","binary", "minkowski", "mahalanobis", "bray_curtis", "jaccard", "aitchison"
 distance <- "euclidean"
-iscore <- TRUE  #usare solo il core
+iscore <- FALSE  #usare solo il core
 # iscore <- FALSE  #usare solo il core
 isclr <- TRUE  #usare CLR
 # isclr <- FALSE  #usare CLR
-# isrelab<-TRUE  #usare la relative abundance
-isrelab<-FALSE  #usare la relative abundance
+isrelab<-TRUE  #usare la relative abundance
+# isrelab<-FALSE  #usare la relative abundance
 #"ZCA", "ZCA-cor", "PCA", "PCA-cor", "Cholesky" or "NOWHITE"
-whitemethod<-"ZCA"
+whitemethod<-"NOWHITE"
 #possible zeroimpmethods: "GBM"=default,"SQ","BL","CZM","user" , "pseudocount", "skip"
 #in teoria, se uzi CZM o dovresti impostare amche gli altri parametri quali frac e threshold
 zeroimpmethod<-"CZM"
 #fare pca per massimizzare varianza 
 ispcoa<-FALSE
 # ispcoa<-TRUE
-# ispca<-FALSE
 ispca<-FALSE
+# ispca<-TRUE
 isdebug<-0
 options(error=traceback)
 
@@ -63,6 +63,8 @@ tobesaved<-list(
     distance=distance,
     iscore=iscore,
     isclr=isclr,
+    ispca=ispca,
+    ispcoa=ispcoa,
     isrelab=isrelab,
     whitemethod=whitemethod,
     zeroimpmethod=zeroimpmethod,
@@ -131,36 +133,38 @@ ML.baseline.gen.relab <- (ML.baseline.gen / rep(colSums(ML.baseline.gen), each =
 
 # Calcolo % di campioni in cui il genere ha ab. relativa ≥ 2%
 # ed è presente in almeno il 10% dei casi
-core_genus <- rowSums(ML.baseline.gen.relab >= 2) > (round(0.10 * ncol(ML.baseline.gen.relab)))
+if(iscore){
+  core_genus <- rowSums(ML.baseline.gen.relab >= 2) > (round(0.10 * ncol(ML.baseline.gen.relab)))
+}else{
+  core_genus <- rowSums(ML.baseline.gen.relab >= 0) > (round(0.05 * ncol(ML.baseline.gen.relab)))
+}
+
 # # Filtro la matrice rel ab con solo i genus "core"
 # ML.baseline.gen.core <- ML.baseline.gen.relab[core_genus, ]
 
 
 core_genus_list <- rownames(ML.baseline.gen.relab)[core_genus]
-if (iscore && isdebug) {
+if (isdebug) {
   core_genus_list # stampo nomi genus core
 }
 
 # prendo solo conteggi
-if (iscore) {
+if (isrelab) {
+  ML.baseline.gen.count <- ML.baseline.gen.relab[core_genus, ]
+}else{
   ML.baseline.gen.count <- ML.baseline.gen[core_genus, ]
-} else {
-  ML.baseline.gen.count <- ML.baseline.gen # sì è stupido, ma è più comodo con due nomi diversi
 }
 
-# solo 1 e 0 per dire presenza e assenza, assenza è quando è <10%
-ML.baseline.gen.binary <- as.matrix(ML.baseline.gen.count > 0.1) * 1
+# solo 1 e 0 per dire presenza e assenza, assenza è quando è <10% numero che si può tunare
+if(distance=="jaccard"){
+  ML.baseline.gen.binary <- as.matrix(ML.baseline.gen.count > 0.1) * 1
+}
 
 #zero imputation
 distinputmatrix<-zero_imputation(ML.baseline.gen.count,method=zeroimpmethod)
 #check if there are zeroes:
 if(any(distinputmatrix == 0)){
   print(paste("WARNING: zero_imputation done with",zeroimpmethod," produced a matrix with ",sum(distinputmatrix == 0), "zeroes!"))
-}
-
-#relative abundance
-if(isrelab){
-  distinputmatrix<- sweep(distinputmatrix, 2, colSums(distinputmatrix), "/")
 }
 
 ## trasformazione CLR
@@ -171,12 +175,6 @@ if (isclr) {
   # distinputmatrix<-clr(distinputmatrix)
  }
 
- #normalize data before PCA
- if(ispcoa && !isclr){
-   distinputmatrix <- t(scale(t(distinputmatrix), center = TRUE, scale = TRUE))
- }
-
-  mybrowser("puppa")
 if(whitemethod!="NOWHITE"){
   tmp_distinputmatrix<-whiten(t(distinputmatrix),method=whitemethod)
   distinputmatrix<-t(tmp_distinputmatrix)
@@ -186,7 +184,7 @@ if(ispca){
   #questo è per fare pca, non pcoa
   distinputpca <- princomp(x=t(distinputmatrix), scores=TRUE)
   threshold<-0.05 #voglio tenere variabili che contenogno almeno tot percento di varianza
-  mybrowser("stocazzo")
+
   var_pc <- distinputpca$sdev^2
   prop_var <- var_pc / sum(var_pc) #varianza di ogni nuova variabile
   cum_prop_var <- cumsum(prop_var) #cumulativa di varianza
@@ -243,7 +241,7 @@ outputname <- paste0(outputprefix, ".rds")
 saveRDS(tobesaved,file=outputname)
 
 if(clusnum!=0){
-  outputname <- paste0(outputprefix, ".pdf")
+  outputname <- paste0(outputprefix,"_clusnum", clusnum,".pdf")
   dendo_picture(dendo,clusnum,outputname)
  }
 

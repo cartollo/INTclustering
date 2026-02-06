@@ -4,15 +4,42 @@ linkage:
 	ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC)
 sample:
 	core, full
+zeroimputation:
+	CZM, pseudocount
 other: 
-	isclr,
+	isclr, isrelab, whitening,
 
 
 possibili pipeline da sfruttare:
+
+
+
+-closure (relative abundance)+zero imputation + CLR + euclideo (=aitchinson) + ward/ward2/average  
+
+-closure (relative abundance)+zero imputation + CLR + mahalanobis + ward/ward2/average  
+-closure (relative abundance)+zero imputation + CLR + manhattan + average (ward?)  
+
+
+
+-closure + pearson + average???
+-closure + bray-curtis + average    
+-binary+jaccard+average
+-binary+unifrac+average
+-closure+weighted unifrac+average
+
+-no ward su cose ecologiche
+
+
+
+
+
+
+
+
+
 -abbondanze relative, bray-curtis, average/wardd2   (possibilità di fare PCoA?)
--CLR, (PCA?), euclideo, ward  
 -binary, jaccard, complete/average
--CLR, (PCA?), mahalanobis, average
+
 -CLR, (PCA?), whitening, euclideo, average
 
 ognuno con clusnum da 3-10
@@ -21,3 +48,6 @@ ognuno con clusnum da 3-10
 
 
 controllare che whitening + euclideo = mahalanobis
+
+
+

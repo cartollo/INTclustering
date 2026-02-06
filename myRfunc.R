@@ -30,8 +30,10 @@ dendo_picture<-function(dendo, clusnum=NA, outputname=NA){
   my_colors <- colorRampPalette(c("navy", "white", "red"))(color.divisions)
 
   # breaks simmetrici attorno a 0
-  max_val <- max(distmatrix, na.rm = TRUE)
-  min_val <- min(distmatrix, na.rm = TRUE)
+  # max_val <- max(max(abs(distmatrix, na.rm = TRUE)), min(abs(distmatrix, na.rm = TRUE)))
+  max_val <- max(abs(distmatrix), na.rm = TRUE)
+breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
+  min_val <- -max_val
   # breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
 
   dendo_picture <- pheatmap(
@@ -43,6 +45,7 @@ dendo_picture<-function(dendo, clusnum=NA, outputname=NA){
     scale = "none",
     # annotation_col = annotation_col,
     # breaks = seq(min_val, max_val, length.out = color.divisions + 1),
+    breaks=breaks,
     cutree_cols = clusnum,
     show_rownames = TRUE,
     show_colnames = FALSE,
@@ -55,16 +58,43 @@ dendo_picture<-function(dendo, clusnum=NA, outputname=NA){
   )
 }
 
-single_sample_analisys<-function(dendo, clusnum, distmatrix, debug=FALSE){
-  dendo_cut <- cutree(dendo, k = clusnum)
-  sil<-silhouette(dendo_cut, dmatrix=distmatrix, do.clus.stat=TRUE, do.n.k=TRUE,do.col.sort=TRUE)
+
+single_sample_analisys<-function(filename, clusnum){
+  cat("start analysis on filename:", filename, "\n")
+  database <- readRDS(filename)
+  dendo_cut <- cutree(database$results$dendo, k = clusnum)
+  sil<-silhouette(dendo_cut, dmatrix=database$results$distmatrix, do.clus.stat=TRUE, do.n.k=TRUE,do.col.sort=TRUE)
   summary(sil)
-  avg_sil_width <- mean(sil[, "sil_width"])
-  if(debug){ 
-    cat("Silhouette Score is:", avg_sil_width, "\n")
+  avg_sil_width_all <- mean(sil[, "sil_width"])
+  cat("Silhouette Score is:", avg_sil_width_all, "\n")
+  sil_width_by_cluster <- tapply(sil[, "sil_width"], sil[, "cluster"], mean)
+  if(isdebug){
     View(sil)
-    View(corematrix$results$distmatrix)
-    plot(sil)
+    View(database$results$distmatrix)
   }
-  return(c(sil, avg_sil_width))
+  newfilename<-tools::file_path_sans_ext(filename)
+  newfilename<-paste0(newfilename,"clusnum",clusnum,"_silhouette.pdf")
+  pdf(file=newfilename)
+  cols <- rainbow(clusnum) 
+  plot(sil, col=cols)
+  dev.off()
+
+  cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file="out_compdismatrix.txt",sep=" ",append=TRUE)
+
+  return(sil)
 }
+
+# eval_medoids<-function(distmatrix){
+#   class(distmatrix)
+#   D <- as.matrix(distmatrix)
+#   medoids <- sapply(unique(clusters), function(cl) {
+#     idx <- which(clusters == cl)
+#     idx[ which.min(rowSums(D[idx, idx])) ]
+
+# medoids <- sapply(unique(dendo_cut), function(cl) {
+#   samples_cl <- names(dendo_cut)[dendo_cut == cl]
+#    subD <- database$results$distmatrix[samples_cl, samples_cl, drop = FALSE]
+#    samples_cl[ which.min(rowSums(subD)) ]
+
+# })
+# }

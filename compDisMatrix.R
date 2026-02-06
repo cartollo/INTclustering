@@ -1,14 +1,23 @@
+#define variables
+isdebug<-0
+clusnum<-3
 
 # install.packages("argparse")
 # install.packages("corrr")
 # install.packages("ggcorrplot")
 # install.packages("FactoMineR")
-library("FactoMineR")
+# install.packages("drclust")
+# install.packages("coca")
+# library(drclust)
+library(coca)
 library(argparse)
 library(cluster)
 library(proxy)
+library("FactoMineR")
+library(ggcorrplot)
 library('corrr')
 source("myRfunc.R", keep.source = TRUE)
+
 
 # Create a parser object
 parser <- ArgumentParser(description = "handle input filenames")
@@ -22,25 +31,23 @@ args <- parser$parse_args()
 
 #interactive:
 # args$full="out_create_dismatrix_bray_curtis_ward.D_clsnum_NOWHITE_nocore_noclr_norelab.rds"
+args$core<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_iscore_isclr_isrelab.rds"
+args$full<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab.rds"
 # args$core="out_create_dismatrix_bray_curtis_ward.D_clsnum_NOWHITE_iscore_noclr_norelab.rds"
 
-args$full="out_create_dismatrix_mahalanobis_ward.D_clsnum_NOWHITE_nocore_noclr_norelab.rds"
-args$core="out_create_dismatrix_mahalanobis_ward.D_clsnum_NOWHITE_iscore_noclr_norelab.rds"
+if(args$full!="null"){ isfull<-TRUE}else{isfull<-FALSE}
+if(args$core!="null"){ iscore<-TRUE}else{iscore<-FALSE}
 
-# print the arguments
-cat("full filename:", args$full, "\n")
-cat("core filename:", args$core, "\n")
+if(isfull){
+  fullfilename<-args$full
+  fullsil<-single_sample_analisys(fullfilename,clusnum)
+}
+# if(iscore){
+#   corefilename<-args$core
+#   coresil<-single_sample_analisys(corefilename,clusnum) 
+# }
 
-#load files
-fullmatrix <- readRDS(args$full)
-corematrix <- readRDS(args$core)
+  
 
-# single_sample_analisys(args$full$results$dendo, 3,args$full$results$distmatrix)
 
-clusnum<-2
-debug<-TRUE
-
-coresil<-single_sample_analisys(corematrix$results$dendo,clusnum,corematrix$results$distmatrix, debug)
-
-# fullsil<-single_sample_analisys(fullmatrix$results$dendo,clusnum,fullmatrix$results$distmatrix, debug)
 
