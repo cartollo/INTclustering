@@ -2,7 +2,7 @@
 # possible cluster methods:
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args)==0){
-  clusnum<-4
+  clusnum<-0
 }else{ 
   clusnum <-as.integer(args[1])
 } #clusternum dato da primo argomento
@@ -12,7 +12,7 @@ clus_method <- "ward.D"
 # possible distances:
 # "euclidean", "maximum","manhattan", "canberra","binary", "minkowski", "mahalanobis", "bray_curtis", "jaccard", "aitchison"
 distance <- "euclidean"
-iscore <- FALSE  #usare solo il core
+iscore <- TRUE  #usare solo il core
 # iscore <- FALSE  #usare solo il core
 isclr <- TRUE  #usare CLR
 # isclr <- FALSE  #usare CLR
@@ -233,6 +233,7 @@ tmp_distmatrix <- as.dist(distmatrix) # TODO non sono sicuro serva per euclideo 
 dendo <- hclust(tmp_distmatrix, method = clus_method)
 
 #save stuff
+tobesaved$results$distinputmatrix<-distinputmatrix
 tobesaved$results$distmatrix<-distmatrix
 tobesaved$results$dendo<-dendo
 tobesaved$metadata$time<-Sys.time()
@@ -242,7 +243,8 @@ saveRDS(tobesaved,file=outputname)
 
 if(clusnum!=0){
   outputname <- paste0(outputprefix,"_clusnum", clusnum,".pdf")
-  dendo_picture(dendo,clusnum,outputname)
+  dendo_cut <- cutree(dendo, k = clusnum) 
+  dendo_picture(dendo,clusnum,outputname,distmatrix, distinputmatrix)
  }
 
 

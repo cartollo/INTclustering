@@ -8,14 +8,23 @@ clusnum<-3
 # install.packages("FactoMineR")
 # install.packages("drclust")
 # install.packages("coca")
+# install.packages("uwot")
+# install.packages("umap")
 # library(drclust)
+# install.packages("Rtsne")
+library(Rtsne)
+library(pheatmap)
 library(coca)
+library(grid)
 library(argparse)
 library(cluster)
 library(proxy)
 library("FactoMineR")
 library(ggcorrplot)
 library('corrr')
+library(uwot)
+library(FNN)
+# library(umap)
 source("myRfunc.R", keep.source = TRUE)
 
 
@@ -38,14 +47,15 @@ args$full<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab.r
 if(args$full!="null"){ isfull<-TRUE}else{isfull<-FALSE}
 if(args$core!="null"){ iscore<-TRUE}else{iscore<-FALSE}
 
-if(isfull){
-  fullfilename<-args$full
-  fullsil<-single_sample_analisys(fullfilename,clusnum)
-}
-# if(iscore){
-#   corefilename<-args$core
-#   coresil<-single_sample_analisys(corefilename,clusnum) 
+# if(isfull){
+#   fullfilename<-args$full
+#   fullres<-single_sample_analisys(fullfilename,clusnum)
 # }
+
+if(iscore){
+  corefilename<-args$core
+  coreres<-single_sample_analisys(corefilename,clusnum) 
+}
 
   
 
