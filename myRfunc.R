@@ -95,13 +95,17 @@ single_sample_analisys<-function(filename, clusnum){
   plot(sil, col=cols)
   cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file="out_compdismatrix.txt",sep=" ",append=TRUE)
 
-  #UMAP analysis
-  # umap.distmatrix_mat<-umap(distmatrix_mat, nn_method="precomputed",n_neighbors=15, min_dist=0.1)
-  # plot(umap.distmatrix_mat[,1],umap.distmatrix_mat[,2],col=dendo_cut)
-  umap_tsne<-umap_tsne_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15)
-  umap_tsne<-umap_tsne_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=20)
-  umap_tsne<-umap_tsne_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=5)
+  #UMAP analysis 0<kmin<180, 0<min_dist<0.99
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=10, min_dist=0.05)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.1)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.3)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=30, min_dist = 0.1)
 
+  #tsne analysis perplexity<60
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 5)
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 10)
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 15)
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 30)
 
   on.exit(dev.off(), add = TRUE)
 
@@ -126,9 +130,9 @@ single_sample_analisys<-function(filename, clusnum){
 
 #########################################################
 # Funzione wrapper per UMAP su distance matrix
-umap_tsne_from_distmatrix <- function(distmatrix_mat, dendo_cut,
-                                 kvalue = 15, min_dist = 0.1, seed = 123,
-                                 plot_result = TRUE, filename) {
+umap_from_distmatrix <- function(distmatrix_mat, dendo_cut,
+                                 kvalue, min_dist, seed = 123,
+                                 plot_result = TRUE) {
   # Controlli a caso
   stopifnot(is.matrix(distmatrix_mat))
   stopifnot(nrow(distmatrix_mat) == ncol(distmatrix_mat))
@@ -167,8 +171,19 @@ umap_tsne_from_distmatrix <- function(distmatrix_mat, dendo_cut,
     
   }
 
+  # Restituisci la matrice di coordinate
+  return(umap_res)
+}
+
+########################################################
+#tsne from distmatrix
+tsne_from_distmatrix <- function(distmatrix_mat, dendo_cut,
+                                 perplexity = 15, seed = 123,
+                                 plot_result = TRUE) {
+
+  set.seed(seed)
   ###tsne###
-  tsne_res <- Rtsne(as.dist(distmatrix_mat), is_distance = TRUE, perplexity = kvalue, verbose = TRUE)  
+  tsne_res <- Rtsne(as.dist(distmatrix_mat), is_distance = TRUE, perplexity = perplexity, verbose = TRUE)  
   #plot risultati
   if(plot_result) {
     plot(
@@ -182,7 +197,7 @@ umap_tsne_from_distmatrix <- function(distmatrix_mat, dendo_cut,
     text(
       x = min(tsne_res$Y[,1]), 
       y = min(tsne_res$Y[,2]), 
-      labels = paste0("perplexity=", kvalue),
+      labels = paste0("perplexity=", perplexity),
       pos = 4,       
       cex = 0.9,     # dimensione testo
       col = "black"
@@ -194,10 +209,7 @@ umap_tsne_from_distmatrix <- function(distmatrix_mat, dendo_cut,
       pch = 19
     )
   }
-
-
-  # Restituisci la matrice di coordinate
-  return(c(umap_res, tsne_res))
+return(tsne_res)
 }
 
 
