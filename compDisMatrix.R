@@ -1,6 +1,3 @@
-#define variables
-isdebug<-0
-clusnum<-3
 
 # install.packages("argparse")
 # install.packages("corrr")
@@ -12,7 +9,9 @@ clusnum<-3
 # install.packages("umap")
 # library(drclust)
 # install.packages("Rtsne")
+# install.packages("aricode")
 library(Rtsne)
+library(aricode)
 library(pheatmap)
 library(coca)
 library(grid)
@@ -34,30 +33,42 @@ parser <- ArgumentParser(description = "handle input filenames")
 # Define arguments
 parser$add_argument("-f","--full",type = "character", default = "null", help = "full input file name")
 parser$add_argument("-c","--core", type = "character", default = "null", help = "core input file name")
+parser$add_argument("-n","--clusnum", type = "integer", default = 3, help = "number of clusters")
+parser$add_argument("-o","--outfolder", type = "character", default = ".", help = "output folder")
 
 # Parse the arguments
 args <- parser$parse_args()
+clusnum<-args$clusnum
 
 #interactive:
-# args$full="out_create_dismatrix_bray_curtis_ward.D_clsnum_NOWHITE_nocore_noclr_norelab.rds"
-args$core<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_iscore_isclr_isrelab.rds"
-args$full<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab.rds"
-# args$core="out_create_dismatrix_bray_curtis_ward.D_clsnum_NOWHITE_iscore_noclr_norelab.rds"
+# clusnum<-3
+# args$full="out_create_dismatrix_bray_curtis_ward.D_NOWHITE_skip.rds"
+# args$core<-"out_create_dismatrix_bray_curtis_ward.D_NOWHITE_skip_iscore.rds"
+# args$full<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab.rds"
+# args$core="out_create_dismatrix_euclidean_ward.D2_NOWHITE_CZM_iscore_isclr_isrelab.rds"
 
 if(args$full!="null"){ isfull<-TRUE}else{isfull<-FALSE}
 if(args$core!="null"){ iscore<-TRUE}else{iscore<-FALSE}
 
-# if(isfull){
-#   fullfilename<-args$full
-#   fullres<-single_sample_analisys(fullfilename,clusnum)
-# }
-
 if(iscore){
   corefilename<-args$core
-  coreres<-single_sample_analisys(corefilename,clusnum) 
+  coreres<-single_sample_analisys(filename=corefilename,clusnum=clusnum, noprint = FALSE, txtoutfilename=txtoutfilename, newfile=TRUE, folder=args$outfolder, iscore=TRUE) 
+  txtoutfilename<-coreres$txtoutfilename
 }
 
-  
+
+if(isfull){
+  fullfilename<-args$full
+  fullres<-single_sample_analisys(filename=fullfilename,clusnum=clusnum, noprint=FALSE, txtoutfilename=txtoutfilename, newfile=FALSE, folder=args$outfolder, iscore=FALSE)
+}
+
+
+if(isfull && iscore){
+  compare_twoclustering(fullres = fullres,coreres = coreres, txtoutfilename=txtoutfilename, folder=args$outfolder)
+}
+
+
+dev.off()
 
 
 

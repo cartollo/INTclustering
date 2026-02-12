@@ -27,17 +27,18 @@ mybrowser <- function(msg = "", forcequit=FALSE) {
 
 #########################################################
 #fare un dendogramma
-dendo_picture<-function(dendo_cut, clusnum=NA, distmatrix, distinputmatrix, clus_method, dendo){
+dendo_picture<-function(dendo_cut, clusnum=NA, distinputmatrix, clus_method, dendo){
   table(dendo_cut)
   color.divisions <- 100
   my_colors <- colorRampPalette(c("navy", "white", "red"))(color.divisions)
 
   # breaks simmetrici attorno a 0
-  # max_val <- max(max(abs(distmatrix, na.rm = TRUE)), min(abs(distmatrix, na.rm = TRUE)))
-  max_val <- max(abs(distmatrix), na.rm = TRUE)
-breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
+  #zscore esplicito
+  distinputmatrix <- t(scale(t(distinputmatrix), center = TRUE, scale = TRUE))
+  max_val <- max(abs(distinputmatrix), na.rm = TRUE)
+  breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
+  breaks <- unique(breaks)
   min_val <- -max_val
-  # breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
 
     dendo_picture <- pheatmap(
     distinputmatrix,
@@ -63,18 +64,24 @@ breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
 
 #########################################################
 #analisi di un singolo database creato con create_dismatrix
-single_sample_analisys<-function(filename, clusnum){
+single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, newfile, folder=".", iscore){
   cat("start analysis on filename:", filename, "\n")
   #carico database
   database <- readRDS(filename)
   dendo_cut <- cutree(database$results$dendo, k = clusnum)
   distmatrix_mat=as.matrix(database$results$distmatrix)
+  sil<-silhouette(dendo_cut, dmatrix=distmatrix_mat, do.clus.stat=TRUE, do.n.k=TRUE,do.col.sort=TRUE)
   filename_nopath<-tools::file_path_sans_ext(filename)
   database$config$databasename<-filename_nopath
-
+  if(noprint){
+    return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename_nopath))
+  }
   #apro file in uscita
-  filename_nopath<-paste0(filename_nopath,"_analysis.pdf")
-  pdf(file=filename_nopath)
+  if(newfile){
+    txtoutfilename<-paste0(folder,"/",filename_nopath,"_analysis.txt")
+    filename_nopath<-paste0(folder,"/",filename_nopath,"clusnum_",clusnum,"_analysis.pdf")
+    pdf(file=filename_nopath)
+  }
   grid::grid.newpage()
   print_config_on_pdf(database$config)
   # write_report_header(
@@ -83,17 +90,27 @@ single_sample_analisys<-function(filename, clusnum){
   # )
 
   #disegno la pheatmap
-  mydendo_picture<-dendo_picture(dendo_cut,clusnum, database$results$distmatrix, database$results$distinputmatrix, database$config$clus_method, database$results$dendo)
-  print(mydendo_picture)
+  if(database$config$ispca==FALSE && database$config$whitemethod=="NOWHITE"){
+    if(iscore){
+      dendofile <- readRDS("NOWHITE_isclr_isrelab_iscore.rds")
+      dendomap<-dendofile$results$distinputmatrix
+    }else{
+      dendofile <- readRDS("NOWHITE_isclr_isrelab_isfull.rds")
+      dendomap<-dendofile$results$distinputmatrix
+    }
+  }else{
+    dendomap<-database$results$distinputmatrix
+  }
   
-  sil<-silhouette(dendo_cut, dmatrix=distmatrix_mat, do.clus.stat=TRUE, do.n.k=TRUE,do.col.sort=TRUE)
-  summary(sil)
+
+  mydendo_picture<-dendo_picture(dendo_cut,clusnum, dendomap, database$config$clus_method, database$results$dendo)
+  print(mydendo_picture)
   avg_sil_width_all <- mean(sil[, "sil_width"])
   cat("Silhouette Score is:", avg_sil_width_all, "\n")
   sil_width_by_cluster <- tapply(sil[, "sil_width"], sil[, "cluster"], mean)  
   cols <- rainbow(clusnum) 
   plot(sil, col=cols)
-  cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file="out_compdismatrix.txt",sep=" ",append=TRUE)
+  cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file=txtoutfilename,sep=" ",append=TRUE)
 
   #UMAP analysis 0<kmin<180, 0<min_dist<0.99
   umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=10, min_dist=0.05)
@@ -107,10 +124,57 @@ single_sample_analisys<-function(filename, clusnum){
   tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 15)
   tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 30)
 
-  on.exit(dev.off(), add = TRUE)
-
-  return(c(sil, dendo_cut,database$results$distmatrix))
+  return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename, txtoutfilename=txtoutfilename))
 }
+
+
+compare_twoclustering<-function(fullres, coreres, txtoutfilename, folder="."){
+  #adjusted mutual information 0=randomico, 1=perfetto
+  ami <- AMI(fullres$dendo_cut, coreres$dendo_cut)
+  #adjusted rand index 0=randomico, 1=perfetto
+  ari <- ARI(fullres$dendo_cut, coreres$dendo_cut)
+  
+  #contingency table
+  cont_tab <- table(
+  full = fullres$dendo_cut,
+  core  = coreres$dendo_cut
+)
+
+#scrivo cose su pdf
+grid::grid.newpage()
+grid.text(
+  paste("Clustering comparison between:\n",fullres$filename,"\n", coreres$filename),
+  x = 0.05, y = 0.95,
+  just = c("left", "top"),
+  gp = gpar(fontsize = 10)
+)
+grid.text(
+  sprintf("adjusted rand index 0=randomico, 1=perfetto\n ARI = %.3f\n adjusted mutual information 0=randomico, 1=perfetto \nAMI = %.3f", ari, ami),
+  x = 0.05, y = 0.80,
+  just = c("left", "top"),
+  gp = gpar(fontsize = 10)
+)
+tab_lines <- capture.output(print(cont_tab))
+grid.text(
+  paste("contingency table\n",paste(tab_lines, collapse = "\n")),
+  x = 0.05, y = 0.60,
+  just = c("left", "top"),
+  gp = gpar(fontsize = 10)
+)
+
+pheatmap(
+  prop.table(cont_tab, 1),
+  cluster_rows = FALSE,
+  cluster_cols = FALSE,
+  main = "Contingency table pheatmap"
+)
+
+#print results on txt file
+outfilename=paste0(folder,"/",txtoutfilename)
+cat("AMI=",ami,"ARI=",ari,"\n","\n",sep=" ",file=outfilename,append=TRUE)
+
+}
+
 
 # eval_medoids<-function(distmatrix){
 #   class(distmatrix)
@@ -127,6 +191,16 @@ single_sample_analisys<-function(filename, clusnum){
 # })
 # }
 
+########################################################
+applypca<-function(distinputmatrix, threshold=0.5){
+  distinputpca <- princomp(x=t(distinputmatrix), scores=TRUE)
+  var_pc <- distinputpca$sdev^2
+  prop_var <- var_pc / sum(var_pc) #varianza di ogni nuova variabile
+  cum_prop_var <- cumsum(prop_var) #cumulativa di varianza
+  k <- which(prop_var >= threshold)
+  distinputmatrix <- t(distinputpca$scores[, 1:length(k), drop = FALSE])
+  return (distinputmatrix)
+}
 
 #########################################################
 # Funzione wrapper per UMAP su distance matrix
@@ -247,6 +321,7 @@ print_config_on_pdf <- function(config_list, x = 0.05, y = 0.95, fontsize = 10, 
     if(is.logical(val)) val <- ifelse(val, "TRUE", "FALSE")
     paste(n, "=", val)
   })
+  lines<-append(lines,paste("clusnum = ",clusnum,sep=" "))
   
   # crea viewport per il testo
   vp <- viewport(

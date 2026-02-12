@@ -1,3 +1,17 @@
+fino a qua: core= 2% abbondanza relativa e presente in 10%
+full: presente in 5%
+euclidean_average_clsnum_NOWHITE_iscore_isclr_isrelab_merda 
+euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab_merda         
+mahalanobis_ward.D2_clsnum_NOWHITE_isclr_isrelab            
+euclidean_ward.D2_clsnum_NOWHITE_iscore_isclr_isrelab_merda 
+mahalanobis_average_clsnum_NOWHITE_isclr_isrelab            
+mahalanobis_ward.D_clsnum_NOWHITE_isclr_isrelab
+manhattan_ward.D2_clsnum_NOWHITE_iscore_isclr_isrelab
+
+qua core è abbondanza relativa almeno 2% e presenza in almeno 10%, mentre full è abbondanza relativa almeno al 1% e presente in almeno 5%
+euclidean_ward.D2_clsnum_ZCA_iscore_isclr_isrelab  <--  con whitening
+
+
 distances: 
 	mahalanobis, bray_curtis, jaccard, aitchison, ("euclidean", "maximum", "manhattan", "canberra", "binary", "minkowski)
 linkage:
@@ -15,15 +29,18 @@ possibili pipeline da sfruttare:
 
 
 -closure (relative abundance)+zero imputation + CLR + euclideo (=aitchinson) + ward/ward2/average  
-
--closure (relative abundance)+zero imputation + CLR + mahalanobis + ward/ward2/average  
+-closure (relative abundance)+zero imputation + CLR + mahalanobis + ward/ward2/average 
+-closure (relative abundance)+zero imputation + whitening + CLR + euclideo (=aitchinson) + ward/ward2/average  
 -closure (relative abundance)+zero imputation + CLR + manhattan + average (ward?)  
 
+-closure + bray-curtis + average
+
+-binary+jaccard+average
 
 
 -closure + pearson + average???
--closure + bray-curtis + average    
--binary+jaccard+average
+
+
 -binary+unifrac+average
 -closure+weighted unifrac+average
 
