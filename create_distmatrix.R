@@ -11,25 +11,25 @@ if(length(args)==0){
 clus_method <- "ward.D"
 # possible distances:
 # "euclidean", "maximum","manhattan", "canberra","binary", "minkowski", "mahalanobis", "bray_curtis", "jaccard", "aitchison"
-distance <- "bray_curtis"
+distance <- "euclidean"
 
-iscore <- TRUE  #usare solo il core
-# iscore <- FALSE  #usare solo il core
+# iscore <- TRUE  #usare solo il core
+iscore <- FALSE  #usare solo il core
 
-# isclr <- TRUE  #usare CLR
-isclr <- FALSE  #usare CLR
+isclr <- TRUE  #usare CLR
+# isclr <- FALSE  #usare CLR
 # isrelab<-TRUE  #usare la relative abundance
 isrelab<-FALSE  #usare la relative abundance
 #"ZCA", "ZCA-cor", "PCA", "PCA-cor", "Cholesky" or "NOWHITE"
 whitemethod<-"NOWHITE"
 #possible zeroimpmethods: "GBM"=default,"SQ","BL","CZM","user" , "pseudocount", "skip"
 #in teoria, se uzi CZM o dovresti impostare amche gli altri parametri quali frac e threshold
-zeroimpmethod<-"skip"
+zeroimpmethod<-"CZM"
 #fare pca per massimizzare varianza 
 ispcoa<-FALSE
 # ispcoa<-TRUE
-# ispca<-FALSE
-ispca<-TRUE
+ispca<-FALSE
+# ispca<-TRUE
 
 iscreatedatabase<-FALSE
 
@@ -78,7 +78,7 @@ tobesaved<-list(
   )
 )
 
-print(sessionInfo())
+# print(sessionInfo())
 
 # logfile <- paste0(outputprefix,".log")
 
@@ -150,7 +150,7 @@ if(iscreatedatabase){
 if(iscore){
   genus <- rowSums(ML.baseline.gen.relab >= 2) > (round(0.10 * ncol(ML.baseline.gen.relab)))
 }else{
-  genus <- rowSums(ML.baseline.gen.relab >= 0) > (round(0.05 * ncol(ML.baseline.gen.relab)))
+  genus <- rowSums(ML.baseline.gen.relab >= 1) > (round(0.05 * ncol(ML.baseline.gen.relab)))
 }
 
 if(iscreatedatabase){
@@ -387,7 +387,7 @@ saveRDS(tobesaved,file=outputname)
 if(clusnum!=0){
   outputname <- paste0(outputprefix,"_clusnum", clusnum,".pdf")
   dendo_cut <- cutree(dendo, k = clusnum) 
-  dendo_picture(dendo,clusnum,outputname,distmatrix, distinputmatrix)
+  dendo_picture(dendo_cut=dendo_cut,clusnum=clusnum, distinputmatrix=distinputmatrix, clus_method = clus_method, dendo=dendo)
  }
 
 

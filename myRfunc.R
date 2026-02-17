@@ -38,9 +38,7 @@ dendo_picture<-function(dendo_cut, clusnum=NA, distinputmatrix, clus_method, den
   max_val <- max(abs(distinputmatrix), na.rm = TRUE)
   breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
   breaks <- unique(breaks)
-  min_val <- -max_val
-
-    dendo_picture <- pheatmap(
+  dendo_picture <- pheatmap(
     distinputmatrix,
     color = my_colors,
     cluster_rows = FALSE,
@@ -64,7 +62,7 @@ dendo_picture<-function(dendo_cut, clusnum=NA, distinputmatrix, clus_method, den
 
 #########################################################
 #analisi di un singolo database creato con create_dismatrix
-single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, newfile, folder=".", iscore){
+single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, newfile, folder=".", iscore, iskmeans=TRUE, plot_result=TRUE){
   cat("start analysis on filename:", filename, "\n")
   #carico database
   database <- readRDS(filename)
@@ -101,9 +99,8 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   }else{
     dendomap<-database$results$distinputmatrix
   }
-  
 
-  mydendo_picture<-dendo_picture(dendo_cut,clusnum, dendomap, database$config$clus_method, database$results$dendo)
+  mydendo_picture<-dendo_picture(dendo_cut=dendo_cut,clusnum=clusnum, distinputmatrix=dendomap, clus_method=database$config$clus_method, dendo=database$results$dendo)
   print(mydendo_picture)
   avg_sil_width_all <- mean(sil[, "sil_width"])
   cat("Silhouette Score is:", avg_sil_width_all, "\n")
@@ -113,16 +110,20 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file=txtoutfilename,sep=" ",append=TRUE)
 
   #UMAP analysis 0<kmin<180, 0<min_dist<0.99
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=10, min_dist=0.05)
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.1)
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.3)
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=30, min_dist = 0.1)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=10, min_dist=0.05, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.1, iskmeans=iskmeans,plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.3, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=30, min_dist = 0.1, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
 
   #tsne analysis perplexity<60
-  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 5)
-  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 10)
-  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 15)
-  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 30)
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 5, plot_result=plot_result)
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 10, plot_result=plot_result)
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 15, plot_result=plot_result)
+  tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 30, plot_result=plot_result)
+
+# if(database$config$clus_method=="euclidan" && iskmeans==TRUE){
+#     kmeans_end<-kmeans_scan(t(dendofile$results$distinputmatrix), k_range = 2:10, seed = 123, plot_result=plot_result)
+# }
 
   return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename, txtoutfilename=txtoutfilename))
 }
@@ -206,7 +207,7 @@ applypca<-function(distinputmatrix, threshold=0.5){
 # Funzione wrapper per UMAP su distance matrix
 umap_from_distmatrix <- function(distmatrix_mat, dendo_cut,
                                  kvalue, min_dist, seed = 123,
-                                 plot_result = TRUE) {
+                                 plot_result = TRUE, iskmeans=FALSE, clusnum, mydendo_picture=NULL) {
   # Controlli a caso
   stopifnot(is.matrix(distmatrix_mat))
   stopifnot(nrow(distmatrix_mat) == ncol(distmatrix_mat))
@@ -218,8 +219,8 @@ umap_from_distmatrix <- function(distmatrix_mat, dendo_cut,
   set.seed(seed)
   ### umap###
   nn_list <- uwot:::dist_nn(distmatrix_mat, k = kvalue)
-  umap_res <- umap( distmatrix_mat, nn_method=nn_list, n_neighbors=kvalue, min_dist=0.1)
-
+  umap_res <- umap( distmatrix_mat, nn_method=nn_list, n_neighbors=kvalue, min_dist=min_dist)
+  labels<-paste0("K=", kvalue, "  min_dist=",min_dist)
   # Plot
   if(plot_result) {
     plot(
@@ -237,7 +238,7 @@ umap_from_distmatrix <- function(distmatrix_mat, dendo_cut,
     text(
       x = min(umap_res[,1]), 
       y = min(umap_res[,2]), 
-      labels = paste0("K=", kvalue, "  min_dist=",min_dist),
+      labels = labels,
       pos = 4,       
       cex = 0.9,     # dimensione testo
       col = "black"
@@ -245,8 +246,142 @@ umap_from_distmatrix <- function(distmatrix_mat, dendo_cut,
     
   }
 
+  if(iskmeans){
+    # kmeans_end<-kmeans_scan(umap_res, k_range = 2:10, seed = seed, plot_result = plot_result)
+    #faccio k means su umap
+    kmeans_end<-kmeans_single(umap_res, clusnum=clusnum, seed = seed, plot_result = plot_result, label=labels)  
+
+  }
+
+
   # Restituisci la matrice di coordinate
   return(umap_res)
+}
+
+###### kmenas scan  ##############
+#Y deve essere una matrice campioni x features 
+kmeans_scan <- function(Y,
+                        k_range = 3:10,
+                        seed = 123,
+                        nstart = 50,
+                        iter.max = 200,
+                        plot_result = FALSE) {
+  
+  # controlli di base su input
+  if (!is.matrix(Y)) Y <- as.matrix(Y)
+  if (nrow(Y) < 5) stop("Need at least 5 samples (rows).")
+  if (ncol(Y) < 2) stop("Need at least 2 dimensions (columns).")
+  if (any(!is.finite(Y))) stop("Y contains NA/NaN/Inf.")
+  if (any(k_range >= nrow(Y))) stop("All K must be < number of samples.")
+
+  dY <-stats::dist(Y)
+
+  km_list <- vector("list", length(k_range))
+  names(km_list) <- as.character(k_range)
+
+  wss <- rep(NA_real_, length(k_range))
+  sil_avg <- rep(NA_real_, length(k_range))
+  names(wss) <- names(sil_avg) <- as.character(k_range)
+
+  for (idx in seq_along(k_range)) {
+    k <- k_range[idx]
+    set.seed(seed)
+    km <- stats::kmeans(Y, centers = k, nstart = nstart, iter.max = iter.max)
+    km_list[[idx]] <- km
+    wss[idx] <- km$tot.withinss
+    #silhouette stuff
+    sil <- cluster::silhouette(km$cluster, dY)
+    sil_avg[idx] <- mean(sil[, "sil_width"])
+  }
+
+  best_k <- as.integer(names(which.max(sil_avg)))
+
+  metrics <- data.frame(
+    clusnum = k_range,
+    WSS = as.numeric(wss),
+    Silhouette = as.numeric(sil_avg)
+  )
+
+  if (plot_result) {
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar), add = TRUE)
+    par(mfrow = c(1, 2))
+    plot(k_range, wss, type = "b", xlab = "K", ylab = "WSS",
+          main = paste0("kmeans_scan - Elbow"))
+    if (!is.na(best_k)) abline(v = best_k, lty = 2)
+    plot(k_range, sil_avg, type = "b", xlab = "K", ylab = "Avg silhouette",
+          main = paste0("kmeans_scan - Silhouette"))
+    if (!is.na(best_k)) abline(v = best_k, lty = 2)
+  }
+
+  kmeans_end<-list(kmeans = km_list,metrics = metrics,best_k = best_k)
+  return (kmeans_end)
+}
+
+########### k means singolo  ###########
+kmeans_single <- function(Y,
+                          clusnum,
+                          seed = 123,
+                          nstart = 50,
+                          iter.max = 200,
+                          plot_result = TRUE,
+                          label = NULL) {
+
+  #controlli di base
+  if (!is.matrix(Y)) Y <- as.matrix(Y)
+  if (nrow(Y) < 5) stop("Need at least 5 samples (rows).")
+  if (ncol(Y) < 2) stop("Need at least 2 dimensions (columns).")
+  if (any(!is.finite(Y))) stop("Y contains NA/NaN/Inf.")
+
+  if (!is.numeric(clusnum) || length(clusnum) != 1) stop("clusnum must be a single numeric value.")
+  if (clusnum < 2) stop("clusnum must be >= 2.")
+  if (clusnum >= nrow(Y)) stop("clusnum must be < number of samples.")
+
+  # distance (for silhouette)
+  dY <- stats::dist(Y)
+
+  # kmeans
+  set.seed(seed)
+  km <- stats::kmeans(Y, centers = clusnum, nstart = nstart, iter.max = iter.max)
+
+  # metrics
+  wss <- km$tot.withinss
+  sil <- cluster::silhouette(km$cluster, dY)
+  sil_avg <- mean(sil[, "sil_width"])
+
+  metrics <- data.frame(
+    clusnum = clusnum,
+    WSS = as.numeric(wss),
+    Silhouette = as.numeric(sil_avg)
+  )
+
+if (plot_result) {
+  # grid::grid.newpage()
+  plot(Y[, 1], Y[, 2],
+        col = km$cluster, pch = 19,
+        xlab = "Dim1", ylab = "Dim2",
+        main = paste0("kmeans_single clusters (clusnum=", clusnum, ")"),
+        # sub=label
+        )
+  legend("topleft",
+          legend = sort(unique(km$cluster)),
+          col = sort(unique(km$cluster)),
+          pch = 19, bty = "n")
+  # grid::grid.newpage()
+  plot(sil,
+        main = paste0("kmeans_single silhouette (avg=", signif(sil_avg, 3), ", clusnum=", clusnum, ")"),
+        border = NA)
+  }
+
+  kmeans_end <- list(
+    kmeans = km,
+    metrics = metrics,
+    silhouette = sil,
+    cluster = km$cluster,
+    centers = km$centers
+  )
+
+  return(kmeans_end)
 }
 
 ########################################################

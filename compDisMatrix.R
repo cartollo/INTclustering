@@ -41,9 +41,9 @@ args <- parser$parse_args()
 clusnum<-args$clusnum
 
 #interactive:
-# clusnum<-3
+clusnum<-3
 # args$full="out_create_dismatrix_bray_curtis_ward.D_NOWHITE_skip.rds"
-# args$core<-"out_create_dismatrix_bray_curtis_ward.D_NOWHITE_skip_iscore.rds"
+args$core<-"results/euclidean_ward.D_NOWHITE_CZM_iscore_isclr/out_create_dismatrix_euclidean_ward.D_NOWHITE_CZM_iscore_isclr.rds"
 # args$full<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab.rds"
 # args$core="out_create_dismatrix_euclidean_ward.D2_NOWHITE_CZM_iscore_isclr_isrelab.rds"
 
@@ -52,14 +52,14 @@ if(args$core!="null"){ iscore<-TRUE}else{iscore<-FALSE}
 
 if(iscore){
   corefilename<-args$core
-  coreres<-single_sample_analisys(filename=corefilename,clusnum=clusnum, noprint = FALSE, txtoutfilename=txtoutfilename, newfile=TRUE, folder=args$outfolder, iscore=TRUE) 
+  coreres<-single_sample_analisys(filename=corefilename,clusnum=clusnum, noprint = FALSE, txtoutfilename=txtoutfilename, newfile=TRUE, folder=args$outfolder, iscore=TRUE, plot_result=TRUE, iskmeans=TRUE) 
   txtoutfilename<-coreres$txtoutfilename
 }
 
 
 if(isfull){
   fullfilename<-args$full
-  fullres<-single_sample_analisys(filename=fullfilename,clusnum=clusnum, noprint=FALSE, txtoutfilename=txtoutfilename, newfile=FALSE, folder=args$outfolder, iscore=FALSE)
+  fullres<-single_sample_analisys(filename=fullfilename,clusnum=clusnum, noprint=FALSE, txtoutfilename=txtoutfilename, newfile=FALSE, folder=args$outfolder, iscore=FALSE, plot_result=TRUE, iskmeans=TRUE)
 }
 
 
