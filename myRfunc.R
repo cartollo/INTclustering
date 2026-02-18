@@ -27,27 +27,56 @@ mybrowser <- function(msg = "", forcequit=FALSE) {
 
 #########################################################
 #fare un dendogramma
-dendo_picture<-function(dendo_cut, clusnum=NA, distinputmatrix, clus_method, dendo){
-  table(dendo_cut)
+dendo_picture<-function(distinputmatrix, clus_method, dendo, kmeans_cluster = NULL,split_by_kmeans = FALSE){
+  # table(dendo_cut)
   color.divisions <- 100
   my_colors <- colorRampPalette(c("navy", "white", "red"))(color.divisions)
 
   # breaks simmetrici attorno a 0
-  #zscore esplicito
+  #zscore esplicito anche se dovrebbe essere inutile
   distinputmatrix <- t(scale(t(distinputmatrix), center = TRUE, scale = TRUE))
   max_val <- max(abs(distinputmatrix), na.rm = TRUE)
   breaks <- seq(-max_val, max_val, length.out = color.divisions + 1)
   breaks <- unique(breaks)
-  dendo_picture <- pheatmap(
+  gaps_col <- NULL
+  annotation_col <- NULL
+  #se è kmeans:
+  if (split_by_kmeans) {
+    missing <- setdiff(colnames(distinputmatrix), names(kmeans_cluster))
+    if (length(missing) > 0) {
+      stop(paste0("Missing kmeans labels for samples: ", paste(missing, collapse = ", ")))
+    }
+    cl <- kmeans_cluster[colnames(distinputmatrix)]
+    cl <- as.integer(as.factor(cl)) #voglio che i cluster siano numerici
+    annotation_col <- data.frame(kmeans = factor(cl))
+    rownames(annotation_col) <- colnames(distinputmatrix)
+    #ordino i cluster in modo che rimanghino allineati
+    ord <- order(cl)
+    distinputmatrix <- distinputmatrix[, ord, drop = FALSE]
+    annotation_col <- annotation_col[ord, , drop = FALSE]
+    cl_ord <- cl[ord]
+
+    tab <- table(cl_ord)
+    gaps_col <- cumsum(as.integer(tab))
+    gaps_col <- gaps_col[-length(gaps_col)]
+
+  cluster_cols_arg<-FALSE
+  }else{
+    cluster_cols_arg<-dendo
+  }
+
+  mydendo_picture <- pheatmap(
     distinputmatrix,
     color = my_colors,
     cluster_rows = FALSE,
-    cluster_cols = dendo,
+    cluster_cols = cluster_cols_arg,
     clustering_method = clus_method,
     scale = "none",
     # annotation_col = annotation_col,
     # breaks = seq(min_val, max_val, length.out = color.divisions + 1),
     breaks=breaks,
+    gaps_col = gaps_col,         
+    annotation_col = annotation_col, 
     cutree_cols = clusnum,
     show_rownames = TRUE,
     show_colnames = FALSE,
@@ -100,7 +129,7 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
     dendomap<-database$results$distinputmatrix
   }
 
-  mydendo_picture<-dendo_picture(dendo_cut=dendo_cut,clusnum=clusnum, distinputmatrix=dendomap, clus_method=database$config$clus_method, dendo=database$results$dendo)
+  mydendo_picture<-dendo_picture(distinputmatrix=dendomap, clus_method=database$config$clus_method, dendo=database$results$dendo)
   print(mydendo_picture)
   avg_sil_width_all <- mean(sil[, "sil_width"])
   cat("Silhouette Score is:", avg_sil_width_all, "\n")
@@ -110,10 +139,10 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file=txtoutfilename,sep=" ",append=TRUE)
 
   #UMAP analysis 0<kmin<180, 0<min_dist<0.99
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=10, min_dist=0.05, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.1, iskmeans=iskmeans,plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=15, min_dist = 0.3, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
-  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, kvalue=30, min_dist = 0.1, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum, mydendo_picture=mydendo_picture)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, dendo=dendo, kvalue=10, min_dist=0.05, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum, distinputmatrix=dendomap)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut,dendo=dendo, kvalue=15, min_dist = 0.1, iskmeans=iskmeans,plot_result=plot_result, clusnum=clusnum,distinputmatrix=dendomap)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, dendo=dendo, kvalue=15, min_dist = 0.3, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum,distinputmatrix=dendomap)
+  umap_res<-umap_from_distmatrix(distmatrix_mat=distmatrix_mat,dendo_cut=dendo_cut, dendo=dendo, kvalue=30, min_dist = 0.1, iskmeans=iskmeans, plot_result=plot_result, clusnum=clusnum,distinputmatrix=dendomap)
 
   #tsne analysis perplexity<60
   tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = 5, plot_result=plot_result)
@@ -205,9 +234,9 @@ applypca<-function(distinputmatrix, threshold=0.5){
 
 #########################################################
 # Funzione wrapper per UMAP su distance matrix
-umap_from_distmatrix <- function(distmatrix_mat, dendo_cut,
+umap_from_distmatrix <- function(distmatrix_mat, dendo_cut, dendo,
                                  kvalue, min_dist, seed = 123,
-                                 plot_result = TRUE, iskmeans=FALSE, clusnum, mydendo_picture=NULL) {
+                                 plot_result = TRUE, iskmeans=FALSE, clusnum, mydendo_picture=NULL,distinputmatrix=NULL) {
   # Controlli a caso
   stopifnot(is.matrix(distmatrix_mat))
   stopifnot(nrow(distmatrix_mat) == ncol(distmatrix_mat))
@@ -250,6 +279,9 @@ umap_from_distmatrix <- function(distmatrix_mat, dendo_cut,
     # kmeans_end<-kmeans_scan(umap_res, k_range = 2:10, seed = seed, plot_result = plot_result)
     #faccio k means su umap
     kmeans_end<-kmeans_single(umap_res, clusnum=clusnum, seed = seed, plot_result = plot_result, label=labels)  
+  
+    mydendo_picture<-dendo_picture(distinputmatrix=distinputmatrix, clus_method="euclidean", dendo=dendo, kmeans_cluster=kmeans_end$km$cluster, split_by_kmeans=TRUE)
+    print(mydendo_picture)
 
   }
 
