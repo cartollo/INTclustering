@@ -8,10 +8,10 @@ if(length(args)==0){
 } #clusternum dato da primo argomento
 
 # "ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC).
-clus_method <- "ward.D2"
+clus_method <- "ward.D"
 # possible distances:
 # "euclidean", "maximum","manhattan", "canberra","binary", "minkowski", "mahalanobis", "bray_curtis", "jaccard", "aitchison"
-distance <- "mahalanobis"
+distance <- "euclidean"
 
 iscore <- TRUE  #usare solo il core
 # iscore <- FALSE  #usare solo il core
@@ -35,7 +35,7 @@ iscreatedatabase<-FALSE
 
 isdebug<-0
 options(error=function() { traceback(2); if(!interactive()) quit("no", status = 1, runLast = FALSE) })
-
+  
 #su DRAP
 # inputfile="/Users/ymac/myINT/myemicrain/mountemicrain/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData"
 #local
@@ -366,8 +366,7 @@ if(ispcoa){
   pcoaed<-wcmdscale(distmatrix,k=10, eig=TRUE,add=TRUE, x.ret = TRUE)
 }
 
-
-tmp_distmatrix <- as.dist(distmatrix, drop=FALSE) 
+tmp_distmatrix <- as.dist(distmatrix) 
 # clustering gerarchico
 dendo <- hclust(tmp_distmatrix, method = clus_method)
 
