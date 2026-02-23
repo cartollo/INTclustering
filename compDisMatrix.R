@@ -9,8 +9,12 @@
 # install.packages("umap")
 # library(drclust)
 # install.packages("Rtsne")
+# install.packages("clue")
 # install.packages("aricode")
+# install.packages("dbscan")
 library(Rtsne)
+library(dbscan)
+library(clue)
 library(aricode)
 library(pheatmap)
 library(coca)
@@ -25,6 +29,7 @@ library(uwot)
 library(FNN)
 # library(umap)
 source("myRfunc.R", keep.source = TRUE)
+options(error=function() { traceback(2); if(!interactive()) quit("no", status = 1, runLast = FALSE) })
 
 
 # Create a parser object
@@ -35,20 +40,26 @@ parser$add_argument("-f","--full",type = "character", default = "null", help = "
 parser$add_argument("-c","--core", type = "character", default = "null", help = "core input file name")
 parser$add_argument("-n","--clusnum", type = "integer", default = 3, help = "number of clusters")
 parser$add_argument("-o","--outfolder", type = "character", default = ".", help = "output folder")
+parser$add_argument("-i","--interactive", type = "integer", default = 0, help = "interactive mode (1 for interactive, 0 for command line)")
 
 # Parse the arguments
 args <- parser$parse_args()
 clusnum<-args$clusnum
 
 #interactive:
-clusnum<-3
-# args$full="out_create_dismatrix_bray_curtis_ward.D_NOWHITE_skip.rds"
-args$core<-"results/euclidean_ward.D_NOWHITE_CZM_iscore_isclr/out_create_dismatrix_euclidean_ward.D_NOWHITE_CZM_iscore_isclr.rds"
+if(args$interactive==1){
+  clusnum<-3
+  args$full="results/euclidean_ward.D_NOWHITE_CZM_isclr/out_create_dismatrix_euclidean_ward.D_NOWHITE_CZM_iscore_isclr.rds"
+  args$core<-"results/euclidean_ward.D_NOWHITE_CZM_isclr/out_create_dismatrix_euclidean_ward.D_NOWHITE_CZM_isclr.rds"
+}
+
 # args$full<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab.rds"
 # args$core="out_create_dismatrix_euclidean_ward.D2_NOWHITE_CZM_iscore_isclr_isrelab.rds"
 
 if(args$full!="null"){ isfull<-TRUE}else{isfull<-FALSE}
 if(args$core!="null"){ iscore<-TRUE}else{iscore<-FALSE}
+
+set.seed(123)
 
 if(iscore){
   corefilename<-args$core
@@ -64,7 +75,7 @@ if(isfull){
 
 
 if(isfull && iscore){
-  compare_twoclustering(fullres = fullres,coreres = coreres, txtoutfilename=txtoutfilename, folder=args$outfolder)
+  compare_twoclustering(first = fullres$dendo_cut,second = coreres$dendo_cut, firstfilename=fullres$filename, secondfilename=coreres$filename, txtoutfilename=txtoutfilename, folder=args$outfolder)
 }
 
 

@@ -6,3 +6,8 @@ mountemicrain/*
 onedriveEmicrain
 *.png
 .Rhistory
+.DS_Store
+.Rapp.history
+*.log
+*.txt
+myemicrain.code-workspace

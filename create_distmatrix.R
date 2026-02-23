@@ -8,13 +8,13 @@ if(length(args)==0){
 } #clusternum dato da primo argomento
 
 # "ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC).
-clus_method <- "ward.D"
+clus_method <- "ward.D2"
 # possible distances:
 # "euclidean", "maximum","manhattan", "canberra","binary", "minkowski", "mahalanobis", "bray_curtis", "jaccard", "aitchison"
-distance <- "euclidean"
+distance <- "mahalanobis"
 
-# iscore <- TRUE  #usare solo il core
-iscore <- FALSE  #usare solo il core
+iscore <- TRUE  #usare solo il core
+# iscore <- FALSE  #usare solo il core
 
 isclr <- TRUE  #usare CLR
 # isclr <- FALSE  #usare CLR
@@ -34,7 +34,7 @@ ispca<-FALSE
 iscreatedatabase<-FALSE
 
 isdebug<-0
-options(error=traceback)
+options(error=function() { traceback(2); if(!interactive()) quit("no", status = 1, runLast = FALSE) })
 
 #su DRAP
 # inputfile="/Users/ymac/myINT/myemicrain/mountemicrain/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData"
@@ -367,7 +367,7 @@ if(ispcoa){
 }
 
 
-tmp_distmatrix <- as.dist(distmatrix) # TODO non sono sicuro serva per euclideo etc. o per aitchison
+tmp_distmatrix <- as.dist(distmatrix, drop=FALSE) 
 # clustering gerarchico
 dendo <- hclust(tmp_distmatrix, method = clus_method)
 

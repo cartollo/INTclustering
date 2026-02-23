@@ -105,6 +105,8 @@ for (x in dice) {
   print(x)
 }
 
+ifelse(test, yes, no) # è un if else vettoriale, se test è vero restituisce yes, altrimenti no, e lo fa per ogni elemento del vettore test, quindi restituisce un vettore di yes e no
+
 ############ funzioni  ############
 #funzione viene definita con la keyword function
 my_function <- function(fname="cazzo", lname="merda") {
