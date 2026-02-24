@@ -154,8 +154,8 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   }
 
   #faccio loop kmeans se è euclidean
-  if(iskmeans && database$config$distance=="euclidean")
-    kmeans_end<-kmeans_loop_metrics(Y=t(dendomap), k_range = 2:10, plot_result=plot_result, dendo=database$results$dendo, distinputmatrix=dendomap, dendo_cut=dendo_cut)
+  if(iskmeans && (database$config$distance=="euclidean" || database$config$distance=="manhattan" || database$config$distance=="maximum" || database$config$distance=="canberra" || database$config$distance=="binary" || database$config$distance=="minkowski"))
+    kmeans_end<-kmeans_loop_metrics(Y=t(dendomap), k_range = 2:10, plot_result=plot_result, dendo=database$results$dendo, distinputmatrix=dendomap, dendo_cut=dendo_cut, distance=database$config$distance)
 
   #UMAP analysis 0<kmin<180, 0<min_dist<0.99
 k_vals  <- c(10, 15, 15, 30)
@@ -198,11 +198,32 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
     first = first,
     second  = second
   )
-  cont_mat <- as.matrix(cont_tab)
-  perm <- solve_LSAP(cont_mat, maximum = TRUE)
-  # riordina colonne
-  cont_mat_align <- cont_mat[, perm]
-  cont_mat_align
+  # cont_mat <- as.matrix(cont_tab)
+  # perm <- solve_LSAP(cont_mat, maximum = TRUE)
+  # # riordina colonne
+  # cont_mat_align <- cont_mat[, perm]
+  # cont_mat_align
+
+  # permutazione colonne (second) che massimizza la diagonale
+  perm <- solve_LSAP(cont_tab, maximum = TRUE)
+
+  # tabella allineata (colonne riordinate)
+  cont_mat_align <- cont_tab[, perm, drop = FALSE]
+
+  # second riallineato (stessi valori, ma rinominati/riordinati per corrispondere a first)
+  second_levels <- colnames(cont_mat_align)
+  second_aligned <- factor(
+    second,
+    levels = second_levels,
+    labels = second_levels[perm]
+  )
+
+  # metriche “manuali”
+  prop_row <- prop.table(cont_mat_align, 1)   # ogni riga somma a 1
+  prop_col <- prop.table(cont_mat_align, 2)   # ogni colonna somma a 1
+  overlap  <- sum(diag(cont_mat_align)) / sum(cont_mat_align)
+  round(prop_row, 2)
+  optimized_table<-table(first, second_aligned)
 
   #scrivo cose su pdf
   grid::grid.newpage()
@@ -218,7 +239,7 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
     just = c("left", "top"),
     gp = gpar(fontsize = 10)
   )
-  tab_lines <- capture.output(print(cont_mat_align))
+  tab_lines <- capture.output(print(optimized_table))
   grid.text(
     paste("contingency table\n",paste(tab_lines, collapse = "\n")),
     x = 0.05, y = 0.60,
@@ -227,7 +248,7 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
   )
 
   pheatmap(
-    prop.table(cont_mat_align, 1),
+    prop.table(optimized_table, 1),
     cluster_rows = FALSE,
     cluster_cols = FALSE,
     main = "Contingency table pheatmap"
@@ -309,7 +330,7 @@ umap_from_distmatrix <- function(distmatrix_mat, dendo_cut, dendo,
 
 kmeans_loop_metrics <- function(Y,
                                 k_range = 3:10,
-                                plot_result = FALSE, dendo=NULL, distinputmatrix=NULL, dendo_cut=NULL) {
+                                plot_result = FALSE, dendo=NULL, distinputmatrix=NULL, dendo_cut=NULL, distance="euclidean") {
 
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (any(k_range >= nrow(Y))) stop("All K must be < number of samples.")
@@ -326,7 +347,7 @@ kmeans_loop_metrics <- function(Y,
 
   for (i in seq_along(k_range)) {
     k <- k_range[i]
-    res <- kmeans_single(Y=Y, kclusnum=k, plot_result=plot_result, isumap=FALSE, distinputmatrix=distinputmatrix, dendo=dendo, dendo_cut=dendo_cut)
+    res <- kmeans_single(Y=Y, kclusnum=k, plot_result=plot_result, isumap=FALSE, distinputmatrix=distinputmatrix, dendo=dendo, dendo_cut=dendo_cut, distance=distance)
     res_list[[i]] <- res
     wss[i] <- res$metrics$WSS
     sil_avg[i] <- res$metrics$Silhouette
@@ -372,7 +393,9 @@ kmeans_single <- function(Y,
                           label = NULL,
                           distinputmatrix,
                           dendo,
-                          dendo_cut) {
+                          dendo_cut,
+                          distance="euclidean"
+                          ) {
 
   #controlli di base
   if (!is.matrix(Y)) Y <- as.matrix(Y)
@@ -385,7 +408,7 @@ kmeans_single <- function(Y,
   if (kclusnum >= nrow(Y)) stop("kclusnum must be < number of samples.")
 
   # distance (for silhouette)
-  dY <- stats::dist(Y)
+  dY <- stats::dist(Y, method=distance)
 
   # kmeans
   km <- stats::kmeans(Y, centers = kclusnum, nstart = nstart, iter.max = iter.max)

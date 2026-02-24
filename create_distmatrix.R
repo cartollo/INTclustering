@@ -8,13 +8,13 @@ if(length(args)==0){
 } #clusternum dato da primo argomento
 
 # "ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC).
-clus_method <- "ward.D"
+clus_method <- "ward.D2"
 # possible distances:
 # "euclidean", "maximum","manhattan", "canberra","binary", "minkowski", "mahalanobis", "bray_curtis", "jaccard", "aitchison"
-distance <- "euclidean"
+distance <- "maximum"
 
-iscore <- TRUE  #usare solo il core
-# iscore <- FALSE  #usare solo il core
+# iscore <- TRUE  #usare solo il core
+iscore <- FALSE  #usare solo il core
 
 isclr <- TRUE  #usare CLR
 # isclr <- FALSE  #usare CLR
@@ -46,7 +46,7 @@ if(isclr && (distance=="bray_curtis" || distance=="jaccard")){
   print(paste("you chosed  with CLR with ",distance,", and this is nosense, please, be careful and try again"))
   quit(save = "no")  
 }
-if(!(distance == "euclidean" || distance == "maximum" || distance == "manhattan" || distance == "canberra" || distance == "binary" || distance == "minkowski") && whitemethod!="NOWHITE"){
+if((distance == "euclidean" || distance == "maximum" || distance == "manhattan" || distance == "canberra" || distance == "binary" || distance == "minkowski") && whitemethod!="NOWHITE"){
   print(paste("you chosed  with whitening with ",distance,", and this is nosense, please, be careful and try again"))
   quit(save = "no")  
 }

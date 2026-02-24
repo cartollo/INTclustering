@@ -1,3 +1,67 @@
+risultati 23 febbraio 26
+SNN fa sempre un paio di cluster + il noise --> è basato sulla densità di cluster
+
+considerazioni a caso:
+-euclidean_average_NOWHITE_CZM_isclr_clusnosense fa cluster no sense con un clusterone gigante 
+
+-euclidean_ward.D2_NOWHITE_CZM_isclr: qua cluster hanno numero più normali, da dendogramma sembra che numero di cluster buono possa essere tipo 5, dove i casi con zscore più alti possono essere divisi in più gruppi, mentre i due gruppi più grandi sono generalmente quelli con zscore più bassi.
+silhouette dà 0.09
+Kmeans con 5 cluster sembra dare risultati relativamente sovrapponibili ARI~0.22, AMI~0.28
+kmeans dice che picco per avg silhouette è con 5 cluster, ma è cmq basso (0.13)
+caso più grande è relativamente simile a caso core, ARI~0.3 e AMI~0.266
+
+-euclidean_ward.D_NOWHITE_CZM_isclr: qua cluster numeri normali, dal dendogramma si potrebbe fare 3 cluster dove ho un cluster da 42 pazienti che è poi divisibile in altri clusters, poi ho due cluster abbastanza grossi di pazienti con zscore genrealmente vicini a zero (vicini alla media). Tutto molto bello, però silhouette viene di 0.06, con i valori di silhouette più bassi soprattutto per i pazienti con z score più alti/bassi. Silhouette totale ~ 0.06, silhouette cluster con zscore più alti di -0.18
+facendo kmeans 3 viene ARI e AMI di ~0.2, quindi sovrapposti fino ad una certa, ovviamente silhoutte è più alta, ma fino ad un certo punto 0.11. Perà kmeans 3 o anche 4 non sembra brutto...
+grafici umap non sono così male
+ARI e AMI per caso globale: 0.23 e 0.29
+anche qua kmeans dà picco su 5-6, ma con 6 vengono cluster troppo piccoli
+kmeans su umap viene meglio con silhouette di 0.42 e sovrapposizione AMI/ARI 0.28-0.29
+
+
+-mahalanobis_ward.D2_NOWHITE_CZM_isclr: qua sembra buono fare 8 cluster, dove in realtà due cluster sono da 1 e 2 pazienti, che quindi potrebbero essere visti come outlier.
+Silhouette è 0.17, ma in pratica è solo il clusterone con tutti quelli che hanno zscore bassi che hanno uno silhouette più alto (0.35) mentre gli altri hanno tutti silnouette negativo o circa zero. Qua kmeans non ha senso perchè fa cluster tutti simili. Umap non facili da capire perchè c'è clusterone centrale esteso e altri un po' più sparsi. C'è buon ARI e AMI tra core e non core (~0.5)
+
+-mahalanobis_ward.D_NOWHITE_CZM_isclr: qua difficile valutare su numero clusters, in pratica ce ne sono due ben separate, una con zscore alta, altra con zscore bassa.
+poi aumentando i numeri di cluster si vede che inizia a spacchettare questi due clusters
+kmeans fa cose diverse non sovrapponibili
+in generale, caso core e full sono molto sovrapponibili (ARI/AMI ~ 0.3-0.4)
+
+-mahalanobis_ward.D_NOWHITE_CZM_iscore_isclr_ispca: seleziona solo 7 componenti per vincolo su soglia varianza del 5%. Così si può fare clustering con 4 clusters, silhouette media di 0.07, ma perchè ci sono due clusters con silhouette completamente negativi: -0.13 e -0.2
+Qua è unico caso dove snn dà dei risultati un po' diversi dagli altri casi, anche se è discostante rispetto a clustering hierarchico
+kmeans con 4 viene relativamente consistente, ha ARI/AMI di 0.39-0.4
+se faccio su matrice full, lui me ne seleziona solo 5 con varianza maggiore di 5%, dendogramma caso full abbastanza diverso da caso core, infatti sovrapposizione con AMI/ARI di 0.17/0.11
+
+-manhattan_ward.D_NOWHITE_CZM_isclr: qua caso con 3 cluster separati abbastanza bene, da dendogramma ci potrebbe stare anche 4 clusters, ma da spazio umap sembra essere meglio farne 3. Inoltre, con kmeans fatto su umap e 3 clusters si ottengono risultati molto sovrapponibili: AMI/ARI: 0.62-0.55, silhouette con dendogramma viene 0.07, ma con kmeans, spostando di cluster solo pochi pazienti si ottiene una silhouette di 0.47. 
+in generale, su umap ci sono cluster divisi meglio
+Se invece faccio kmeans sullo spazio originale invece che su umap viene peggio: ho ami/ari di 0.17-0.18 e cominciano ad essere risultati un po' più discordanti
+pasando al caso full si hanno risultati abbastanza simili, tra core e full c'è ami/ari di 0.26-0.25, ma se guardi la pheatmap è abbastanza diagonale
+kmeans fatto su spazio originale non umap si ottengono valori simili ad euclidean
+
+-minkowski_ward.D2_NOWHITE_CZM_isclr: forse 4 cluster caso migliore, silhouette di 0.22, kmeans su spazio originale ha ARI/AMI di 0.32-0.34, umap non sembrano clusterizzati aprticolarmente bene, infatti kmeans su umap ha ari/ami di 0.1-0.2 
+
+-canberra_ward.D2_NOWHITE_CZM_isclr: con due cluster divide pazienti con zscore più alti e quelli più bassi, silhouette di 0.1.
+Kmeans su spazio originale dà risultati un po' diversi, ma ari/ami di 0.45-0.34, su umap sono abbastanza separati ed infatti kmeans su umap viene bene e molto sovrapponibile con ari/ami di 0.6-0.47
+anche grafico tsne viene abbastanza separato, caso full è come core, ari/ami di 0.3-0.4
+con 3 cluster divide quello con zscore più bassi in due, c'è abbastanza sovrapposizione con kmeans ami/ari 0.31-0.4
+umap viene clusterizzato bene, kmeans su umap molto sovrapponibile 0.65-0.51
+sovrapposizione con full è di ami/ari 0.3-0.27, ma il resto come caso core
+con 4 sovrapposizione con k means viene meno
+
+-maximum_ward.D2_NOWHITE_CZM_isclr: non capisco il dendogramma
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 fino a qua: core= 2% abbondanza relativa e presente in 10%
 full: presente in 5%
 euclidean_average_clsnum_NOWHITE_iscore_isclr_isrelab_merda 
