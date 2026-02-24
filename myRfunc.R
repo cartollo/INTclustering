@@ -112,6 +112,11 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
     dendomap<-database$results$distinputmatrix
   }
 
+  #correlazioni:
+  # grid::grid.newpage()
+  correlation_plot(distinputmatrix=t(dendomap), method="pearson")
+  correlation_plot(distinputmatrix=t(dendomap), method="spearman")
+
   #dendo picture iniziale
   mydendo_picture<-dendo_picture(distinputmatrix=dendomap, clus_method=database$config$clus_method, dendo=database$results$dendo, clusnum=clusnum, title="Dendrogram clustering")
   print(mydendo_picture)
@@ -123,35 +128,34 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file=txtoutfilename,sep=" ",append=TRUE)
 
 
-  #clustering con snn
+  #clustering con snn inutile... mapporc
+  # K_values<- c(10,20, 25, 30, 35, 40,50)
+  # Eps_values<- seq(from = 2, to = 20, by = 2)
+  # snn_results_single<-list()
+  # for (k in K_values) {
+  #   for (eps in Eps_values) {
+  #     if (eps >= k) next
+  #   append(snn_results_single,snn_single( k = k, eps = eps, minPts = 5, distinputmatrix = dendomap, distmatrix_mat=distmatrix_mat, plot_result = plot_result, dendo=database$results$dendo, minclusnum=2, maxclusnum=10, maxnoise=15))
+  #   }
+  # }
   
-  K_values<- c(10,20, 25, 30, 35, 40,50)
-  Eps_values<- seq(from = 2, to = 20, by = 2)
-  snn_results_single<-list()
-  for (k in K_values) {
-    for (eps in Eps_values) {
-      if (eps >= k) next
-    append(snn_results_single,snn_single( k = k, eps = eps, minPts = 5, distinputmatrix = dendomap, distmatrix_mat=distmatrix_mat, plot_result = plot_result, dendo=database$results$dendo, minclusnum=2, maxclusnum=10, maxnoise=15))
-    }
-  }
-
-  #printo risultati di snn
-  if(plot_result){
-    plot.new()
-    righe <- c(
-      "SNN analysis results:",
-      for (i in snn_results_single) {
-        paste("k:", i$params$k, "eps:", i$params$eps, "minPts:", i$params$minPts, "n_noise:", i$n_noise, "silhouette_avg:", round(i$sil_avg, 3), "isok=", i$isok, "n_clusters:", i$n_clusters, "clustersize:", paste(i$cluster_sizes, sep=" "))
-        if(i$isok==TRUE){
-          if(i$n_clusters==clusnum)
-            compare_twoclustering(first = dendo_cut, second = i$cl, firstfilename="dendrogram clustering", secondfilename=paste0("SNN clustering (k=",snn_results_single$params$k,", eps=",i$params$eps,", minPts=",i$params$minPts,")"))
-        }
-      }
-    )
-    text(0.1, seq(0.9, 0.9 - 0.05*(length(righe)-1), by = -0.05),
-     labels = righe,
-     adj = 0)
-  }
+  # #printo risultati di snn
+  # if(plot_result){
+  #   plot.new()
+  #   righe <- c(
+  #     "SNN analysis results:",
+  #     for (i in snn_results_single) {
+  #       paste("k:", i$params$k, "eps:", i$params$eps, "minPts:", i$params$minPts, "n_noise:", i$n_noise, "silhouette_avg:", round(i$sil_avg, 3), "isok=", i$isok, "n_clusters:", i$n_clusters, "clustersize:", paste(i$cluster_sizes, sep=" "))
+  #       if(i$isok==TRUE){
+  #         if(i$n_clusters==clusnum)
+  #           compare_twoclustering(first = dendo_cut, second = i$cl, firstfilename="dendrogram clustering", secondfilename=paste0("SNN clustering (k=",snn_results_single$params$k,", eps=",i$params$eps,", minPts=",i$params$minPts,")"))
+  #       }
+  #     }
+  #   )
+  #   text(0.1, seq(0.9, 0.9 - 0.05*(length(righe)-1), by = -0.05),
+  #    labels = righe,
+  #    adj = 0)
+  # }
 
   #faccio loop kmeans se è euclidean
   if(iskmeans && (database$config$distance=="euclidean" || database$config$distance=="manhattan" || database$config$distance=="maximum" || database$config$distance=="canberra" || database$config$distance=="binary" || database$config$distance=="minkowski"))
@@ -615,6 +619,66 @@ print_config_on_pdf <- function(config_list, x = 0.05, y = 0.95, fontsize = 10, 
   popViewport()
 }
 
+#correlation plot
+correlation_plot <- function(distinputmatrix, title="Correlation plot", method="pearson", plot_result=TRUE) {
+  distinputmatrix <- as.matrix(distinputmatrix)
+  cor_mat <- cor(distinputmatrix, method = method)
+  range <- 1
+  colorsnum <- 20
+  mycolors <- colorRampPalette(c("navy", "white", "red"))(colorsnum)
+  mybreaks <- seq(-range, range, length.out = colorsnum + 1)
+  pheatmap(cor_mat, main=paste(title, "method=", method), cluster_rows = FALSE, cluster_cols = FALSE, breaks=mybreaks, color=mycolors )
+
+  # Metti NA sulla diagonale per escluderla
+  diag(cor_mat) <- NA
+  # Prendi solo triangolo superiore
+  cor_upper <- cor_mat
+  cor_upper[lower.tri(cor_upper)] <- NA
+  # Trasforma in data frame lungo
+  cor_df <- as.data.frame(as.table(cor_upper))
+  # Rimuovi NA
+  cor_df <- cor_df[!is.na(cor_df$Freq), ]
+  # Ordina per correlazione decrescente
+  cor_df <- cor_df[order(-cor_df$Freq), ]
+  # Prendi le prime 5
+  top5 <- head(cor_df, 5)
+  tail5 <- tail(cor_df, 5)
+  if(plot_result){
+    grid::grid.newpage()
+    grid.text(
+      paste("Top 5 feature correlations (method=", method, ")", sep=""),
+      x = 0.05, y = 0.95,
+      just = c("left", "top"),
+      gp = gpar(fontsize = 10)
+    )
+    for(i in seq_len(nrow(top5))) {
+      line <- sprintf("%s vs %s: %.3f", top5$Var1[i], top5$Var2[i], top5$Freq[i])
+      grid.text(
+        line,
+        x = 0.05, y = 0.95 - i * 0.03,
+        just = c("left", "top"),
+        gp = gpar(fontsize = 10)
+      ) 
+    }
+    grid.text(
+      paste("Top 5 feature anti-correlations (method=", method, ")", sep=""),
+      x = 0.05, y = 0.55,
+      just = c("left", "top"),
+      gp = gpar(fontsize = 10)
+    )
+    for(i in seq_len(nrow(tail5))) {
+      line <- sprintf("%s vs %s: %.3f", tail5$Var1[i], tail5$Var2[i], tail5$Freq[i])
+      grid.text(
+        line,
+        x = 0.05, y = 0.55 - i * 0.03,
+        just = c("left", "top"),
+        gp = gpar(fontsize = 10)
+      ) 
+    }    
+  
+  }
+
+}
 
 
 ######################################## old not used anymore functions ########################################  

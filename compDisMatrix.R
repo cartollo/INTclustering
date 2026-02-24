@@ -45,12 +45,15 @@ parser$add_argument("-i","--interactive", type = "integer", default = 0, help = 
 # Parse the arguments
 args <- parser$parse_args()
 clusnum<-args$clusnum
+isinteractive<-args$interactive
+#da commentare o scommentare
+isinteractive<-TRUE
 
 #interactive:
-if(args$interactive==1){
+if(isinteractive==TRUE){
   clusnum<-3
-  args$full="results/euclidean_ward.D_NOWHITE_CZM_isclr/out_create_dismatrix_euclidean_ward.D_NOWHITE_CZM_iscore_isclr.rds"
-  args$core<-"results/euclidean_ward.D_NOWHITE_CZM_isclr/out_create_dismatrix_euclidean_ward.D_NOWHITE_CZM_isclr.rds"
+  args$full="out_create_dismatrix_manhattan_ward.D_NOWHITE_CZM_isclr.rds"
+  args$core<-"out_create_dismatrix_manhattan_ward.D_NOWHITE_CZM_iscore_isclr.rds"
 }
 
 # args$full<-"out_create_dismatrix_euclidean_ward.D_clsnum_NOWHITE_isclr_isrelab.rds"
