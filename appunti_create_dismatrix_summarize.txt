@@ -1,3 +1,35 @@
+2/3:
+canberra results: avg_sil_width_all è max per 3 cluster con 0.1192397, ma 2 cluster ha avg_sil_width_all 0.1028337
+ma valor medio di silhouette su kmeans on umap è più alto per caso 2 cluster: 0.50-0.55 rispetto a 0.48-0.5
+anche ami/ari più alto per caso 2 cluster rispetto 3 cluseter: 0.3-0.49 rispetto 0.28-0.29,
+anche ami/ari per kmeans su umap più alto per 2 clusters: 0.3-0.49 vs 0.25-0.32
+per caso weighted avg_sil_width_all è max per 2 cluster: 0.1-0.09 vs 0.07-0.06, silhouette per kmeans on umap più alto caso 2: 0.5-0.42 vs 0.47-0.42
+sovrapposizione ami/ari più alto caso 2: 0.25-0.34, ma per ami/ari per kmeans è più alto per 3 clusters: 0.24-0.46 vs 0.26-0.42
+
+se faccio canberra più average o complete il clustering e gli altri metodi non variano, ma variano aolo alcuni parametri quali ami/ari, tipicamente si abbassano 
+
+
+euclidean:  con più cluster cominciano ad esserci almeno un cluster da <10 pazienti
+avg_sil_width_all più alto con 2 cluster,
+ 0.24-0.19 non weighted, mentre weighted è 0.27-0.31
+sil per kmeans su umap: 0.47-0.4 non weighted, mentre weighted è 0.4-0.43
+ami/ari non weighted: 0.22-0.41 su clustering, 0.02-0.25 su kmeans on umap
+ami/ari weighted: 0.1-0.2 su clustering, 0.00 per kmeans su umap
+
+manhattan:
+come più di due cluster c'è almeno un cluster da 3 elementi con poco senso
+avg_sil_width_all 0.3-0.14 (no weight), 0.29-0.25 (weighted)
+sil per kmeans su umap: 0.5-0.41 (no weight), 0.35-0.4 (weightd)
+ami/ari su clustering originale: 0.17-0.15 (no weight), 0.38-0.51 (weight)
+ami/ari su kmeans on umap: 0.64-0.4 (no weight), 0.1-0.46 (weight)
+
+
+
+
+
+
+
+
 risultati 23 febbraio 26
 SNN fa sempre un paio di cluster + il noise --> è basato sulla densità di cluster
 
@@ -48,6 +80,7 @@ sovrapposizione con full è di ami/ari 0.3-0.27, ma il resto come caso core
 con 4 sovrapposizione con k means viene meno
 
 -maximum_ward.D2_NOWHITE_CZM_isclr: non capisco il dendogramma
+
 
 
 

@@ -1,45 +1,9 @@
-# user defined variables
-# possible cluster methods:
-args <- commandArgs(trailingOnly = TRUE)
-if(length(args)==0){
-  clusnum<-0
-}else{ 
-  clusnum <-as.integer(args[1])
-} #clusternum dato da primo argomento
-
-# "ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC).
-clus_method <- "ward.D2"
-# possible distances:
-# "euclidean", "maximum","manhattan", "canberra","binary", "minkowski", "mahalanobis", "bray_curtis", "jaccard", "aitchison"
-distance <- "maximum"
-
-# iscore <- TRUE  #usare solo il core
-iscore <- FALSE  #usare solo il core
-
-isclr <- TRUE  #usare CLR
-# isclr <- FALSE  #usare CLR
-# isrelab<-TRUE  #usare la relative abundance
-isrelab<-FALSE  #usare la relative abundance
-#"ZCA", "ZCA-cor", "PCA", "PCA-cor", "Cholesky" or "NOWHITE"
-whitemethod<-"NOWHITE"
-#possible zeroimpmethods: "GBM"=default,"SQ","BL","CZM","user" , "pseudocount", "skip"
-#in teoria, se uzi CZM o dovresti impostare amche gli altri parametri quali frac e threshold
-zeroimpmethod<-"CZM"
-#fare pca per massimizzare varianza 
-ispcoa<-FALSE
-# ispcoa<-TRUE
-ispca<-FALSE
-# ispca<-TRUE
-
-iscreatedatabase<-FALSE
-
-isdebug<-0
 options(error=function() { traceback(2); if(!interactive()) quit("no", status = 1, runLast = FALSE) })
-  
-#su DRAP
-# inputfile="/Users/ymac/myINT/myemicrain/mountemicrain/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData"
-#local
-inputfile="/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData"
+
+
+create_db<-function(seed=123, clusnum=0, distance="correlation", clus_method="average", iscore=TRUE, isweighted=FALSE, isclr=TRUE, ispca=FALSE, ispcoa=FALSE, isrelab=FALSE, whitemethod="NOWHITE", zeroimpmethod="CZM", iscreatedatabase=FALSE, inputfile="/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData", isfam=TRUE, subsample_size=-1, outputfilelable="", folderoutput="."){
+set.seed(seed)
+
 
 #do some checks
 if(isclr && (distance=="bray_curtis" || distance=="jaccard")){
@@ -57,24 +21,29 @@ if(ispcoa==TRUE && (iscore==FALSE || ispca==TRUE)){
 
 # other variables
 outputprefix <- paste("out_create_dismatrix", distance, clus_method,whitemethod,zeroimpmethod, sep = "_")
+outputprefix <- paste0(folderoutput, "/", outputprefix)
 if (iscore) {outputprefix <- paste(outputprefix, "iscore", sep = "_")}
+if (isweighted) {outputprefix <- paste(outputprefix, "isweighted", sep = "_")}
 if (isclr) {outputprefix <- paste(outputprefix, "isclr", sep = "_")}
 if (isrelab) { outputprefix <- paste(outputprefix, "isrelab", sep = "_")}
 if(ispca){outputprefix <- paste(outputprefix, "ispca", sep = "_")}
 if(ispcoa){outputprefix <- paste(outputprefix, "ispcoa", sep = "_")}
+if(isfam){outputprefix <- paste(outputprefix, "isfam", sep = "_")}
 
 tobesaved<-list(
   config=list(
     clus_method=clus_method,
     distance=distance,
     iscore=iscore,
+    isweighted=isweighted,
     isclr=isclr,
     ispca=ispca,
     ispcoa=ispcoa,
     isrelab=isrelab,
     whitemethod=whitemethod,
     zeroimpmethod=zeroimpmethod,
-    inputfile=inputfile
+    inputfile=inputfile,
+    isfam=isfam
   )
 )
 
@@ -95,6 +64,7 @@ tobesaved<-list(
 # install.packages("corrr")
 # install.packages("ggcorrplot")
 # install.packages("FactoMineR")
+# install.packages("amap")
 # install.packages("factoextra")
 # install.packages("vegan")
 
@@ -111,13 +81,21 @@ library(ecodist)
 library(vegan)
 library("whitening")
 library(chemometrics)
+library(amap)
 source("myRfunc.R", keep.source = TRUE)
 
 load(file = inputfile, verbose = TRUE)
 # object ML.data
 
-ML.dis.baseline.gen <- ML.data$OTU$dis$gen$bas
-ML.val.baseline.gen <- ML.data$OTU$val$gen$bas
+if(isfam){
+  ML.dis.baseline.gen <- ML.data$OTU$dis$fam$bas
+  ML.val.baseline.gen <- ML.data$OTU$val$fam$bas
+}else{
+  ML.dis.baseline.gen <- ML.data$OTU$dis$gen$bas
+  ML.val.baseline.gen <- ML.data$OTU$val$gen$bas
+}
+
+
 # Merge discovery and validation dataset
 ML.dis.baseline.gen$genus <- rownames(ML.dis.baseline.gen)
 ML.val.baseline.gen$genus <- rownames(ML.val.baseline.gen)
@@ -134,6 +112,11 @@ ML.baseline.gen <- ML.baseline.gen[
   colSums(ML.baseline.gen, na.rm = TRUE) > 0
 ]
 
+if(subsample_size>0){
+  selected_samples <- sample(colnames(ML.baseline.gen), subsample_size)
+  ML.baseline.gen <- ML.baseline.gen[, selected_samples, drop = FALSE]
+}
+
 if(iscreatedatabase){
   createdb$countsall<-ML.baseline.gen
 }
@@ -145,6 +128,15 @@ if(iscreatedatabase){
   createdb$relaball<-ML.baseline.gen.relab
 }
 
+#calcolo peso genus in base a presenza, da usare eventualmente come peso per calcolo distanze pesate
+# genus_weights <- rowSums(ML.baseline.gen > 0) / ncol(ML.baseline.gen)
+#peso come percentuale di campioni in cui il genere ha ab. relativa ≥ 2%
+if(isweighted){  
+  genus_weights <- rowSums(ML.baseline.gen.relab >= 2)/ncol(ML.baseline.gen.relab)
+}else{ 
+  genus_weights <- rep(1, nrow(ML.baseline.gen.relab))
+}
+
 # Calcolo % di campioni in cui il genere ha ab. relativa ≥ 2%
 # ed è presente in almeno il 10% dei casi
 if(iscore){
@@ -153,7 +145,9 @@ if(iscore){
   genus <- rowSums(ML.baseline.gen.relab >= 1) > (round(0.05 * ncol(ML.baseline.gen.relab)))
 }
 
+
 if(iscreatedatabase){
+  createdb$genus_weights<-genus_weights
   core_relabundance<-2
   core_presence<-0.1
   full_relabundance<-0
@@ -172,10 +166,10 @@ if(iscreatedatabase){
 # ML.baseline.gen.core <- ML.baseline.gen.relab[core_genus, ]
 
 
-genus_list <- rownames(ML.baseline.gen.relab)[genus]
-if (isdebug) {
-  genus_list # stampo nomi genus core
-}
+# genus_list <- rownames(ML.baseline.gen.relab)[genus]
+# if (isdebug) {
+#   genus_list # stampo nomi genus core
+# }
 
 # prendo solo conteggi
 if (isrelab) {
@@ -183,12 +177,17 @@ if (isrelab) {
 }else{
   ML.baseline.gen.count <- ML.baseline.gen[genus, ]
 }
+#tengo solo valori dei genus selezionati
+genus_weights<-genus_weights[genus]
+if(isweighted){
+  ML.baseline.gen.count <- ML.baseline.gen.count * genus_weights
+}
 
 if(iscreatedatabase){
-  createdb$core_counts<-ML.baseline.gen.relab[core_genus, ]
-  createdb$core_counts_relab<-ML.baseline.gen.[core_genus, ]
-  createdb$full_counts<-ML.baseline.gen.relab[full_genus, ]
-  createdb$full_counts_relab<-ML.baseline.gen.[full_genus, ]
+  createdb$core_counts_relab<-ML.baseline.gen.relab[core_genus, ]
+  createdb$core_counts<-ML.baseline.gen.[core_genus, ]
+  createdb$full_counts_relab<-ML.baseline.gen.relab[full_genus, ]
+  createdb$full_counts<-ML.baseline.gen.[full_genus, ]
   tmp_jaccard<-ML.baseline.gen[core_genus, ]
   createdb$jaccard_core_input<-as.matrix(tmp_jaccard > 0.1) * 1
   tmp_jaccard<-ML.baseline.gen[full_genus, ]
@@ -232,7 +231,6 @@ if(iscreatedatabase){
 
 ## trasformazione CLR
 if (isclr) {
-  if(isdebug){mybrowser("prima di isclr")}
   distinputmatrix<-apply(log(distinputmatrix), 2, function(x) x - mean(x))
   distinputmatrix <- t(scale(t(distinputmatrix), center = TRUE, scale = TRUE))
   # distinputmatrix<-clr(distinputmatrix)
@@ -285,12 +283,6 @@ if(ispca){
   cum_prop_var <- cumsum(prop_var) #cumulativa di varianza
   k <- which(prop_var >= threshold)
   distinputmatrix <- t(distinputpca$scores[, 1:length(k), drop = FALSE])
-  if(isdebug){
-    summary(distinputpca)
-    fviz_eig(distinputpca, addlabels = TRUE)
-    fviz_pca_var(distinputpca, col.var = "black")
-    fviz_pca_var(distinputpca, col.var = "cos2",gradient.cols = c("black", "orange", "green"),repel = TRUE)
-  }
 }
 
 if(iscreatedatabase){
@@ -302,12 +294,9 @@ if(iscreatedatabase){
  createdb$full_counts_relab_zeroed_clr_whiten_pca<-applypca(createdb$full_counts_relab_zeroed_clr_whiten,pcathreshold)
 }
 
-
-if(isdebug){mybrowser("prima di distanza")}
-
 if (distance == "mahalanobis") {
   print("mahalanobis distace")
-    distmatrix <- MatchIt::mahalanobis_dist(~., t(distinputmatrix))
+    distmatrix <- MatchIt::mahalanobis_dist(~., t(distinputmatrix), s.weights = genus_weights)
 } else if (distance == "bray_curtis") {
   print("bray_curtis distace")
   distmatrix <- bcdist(t(distinputmatrix))#distanze calcolate su righe
@@ -320,6 +309,21 @@ if (distance == "mahalanobis") {
 } else if (distance == "euclidean" || distance == "maximum" || distance == "manhattan" || distance == "canberra" || distance == "binary" || distance == "minkowski") {
   print(paste(distance, "distance"))
   distmatrix <- dist(t(distinputmatrix), method = distance) 
+}else if(distance=="pearson"){
+  print("pearson distance")
+  # distmatrix<-pearson.dist(t(distinputmatrix)) 
+  # distmatrix<-as.matrix(cor((distinputmatrix), method = "pearson"))
+  # distmatrix<-(1-distmatrix)/2 #trasformo in distanza
+  distmatrix<-Dist(t(distinputmatrix), method = "pearson")
+}else if(distance=="spearman"){
+  print("spearman distance")
+  # distmatrix<-spearman.dist(t(distinputmatrix))
+  # distmatrix<-as.matrix(cor((distinputmatrix), method = "spearman"))
+  # distmatrix<-(1-distmatrix)/2 #trasformo in distanza 
+  distmatrix<-Dist(t(distinputmatrix), method = "spearman")  
+}else if(distance=="correlation"){
+  print("correlation distance")
+  distmatrix<-Dist(t(distinputmatrix), method = "correlation")  
 }
 
 if(iscreatedatabase){
@@ -360,8 +364,6 @@ if(iscreatedatabase){
 
 print(paste("distmatrix size: ncol=",ncol(distmatrix)," nrow=",nrow(distmatrix)))
 
-if(isdebug){mybrowser("distanza scelta")}
-
 if(ispcoa){
   pcoaed<-wcmdscale(distmatrix,k=10, eig=TRUE,add=TRUE, x.ret = TRUE)
 }
@@ -370,25 +372,21 @@ tmp_distmatrix <- as.dist(distmatrix)
 # clustering gerarchico
 dendo <- hclust(tmp_distmatrix, method = clus_method)
 
-if(iscreatedatabase){
-
-}
-
 #save stuff
+tobesaved$results$genus_weights<-genus_weights
 tobesaved$results$distinputmatrix<-distinputmatrix
 tobesaved$results$distmatrix<-distmatrix
 tobesaved$results$dendo<-dendo
 tobesaved$metadata$time<-Sys.time()
 tobesaved$metadata$sessioninfo<-sessionInfo()
-outputname <- paste0(outputprefix, ".rds")
+outputname <- paste0(outputprefix,outputfilelable, ".rds")
 saveRDS(tobesaved,file=outputname)
 
 if(clusnum!=0){
   outputname <- paste0(outputprefix,"_clusnum", clusnum,".pdf")
-  dendo_cut <- cutree(dendo, k = clusnum) 
-  dendo_picture(dendo_cut=dendo_cut,clusnum=clusnum, distinputmatrix=distinputmatrix, clus_method = clus_method, dendo=dendo)
+  dendo_picture(dendo=dendo,clusnum=clusnum, distinputmatrix=distinputmatrix, clus_method = clus_method, title="dendo picture")
  }
 
 
-
+}
 

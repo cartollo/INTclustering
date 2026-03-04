@@ -78,36 +78,62 @@ dendo_picture<-function(distinputmatrix, clus_method, dendo, other_cluster = NUL
 
 #########################################################
 #analisi di un singolo database creato con create_dismatrix
-single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, newfile, folder=".", iscore, iskmeans=TRUE, plot_result=TRUE){
+single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, newfile, folder=".", iskmeans=TRUE, plot_result=TRUE){
   cat("start analysis on filename:", filename, "\n")
   #carico database
   database <- readRDS(filename)
   dendo_cut <- cutree(database$results$dendo, k = clusnum)
   distmatrix_mat=as.matrix(database$results$distmatrix)
+  iscore<-database$config$iscore
+  isfam<-database$config$isfam
   sil<-silhouette(dendo_cut, dmatrix=distmatrix_mat, do.clus.stat=TRUE, do.n.k=TRUE,do.col.sort=TRUE)
-  filename_nopath<-tools::file_path_sans_ext(filename)
-  database$config$databasename<-filename_nopath
+  filename_noext<-tools::file_path_sans_ext(filename)
+  database$config$databasename<-filename_noext
   if(noprint){
-    return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename_nopath))
+    return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename_noext, txtoutfilename=txtoutfilename))
   }
   #apro file in uscita
   if(newfile){
-    txtoutfilename<-paste0(folder,"/",filename_nopath,"_analysis.txt")
-    filename_nopath<-paste0(folder,"/",filename_nopath,"clusnum_",clusnum,"_analysis.pdf")
+    txtoutfilename<-paste0(folder,"/",filename_noext,"_analysis.txt")
+    database$txtoutfilename<-txtoutfilename
+    filename_nopath<-paste0(folder,"/",filename_noext,"clusnum_",clusnum,"_analysis.pdf")
     pdf(file=filename_nopath)
   }
+  rdsoutfilename<-paste0(folder,"/",filename_noext,"_analysis.RDS")
   grid::grid.newpage()
   print_config_on_pdf(database$config)
 
+  #printo i pesi
+  if(plot_result){
+     grid::grid.newpage()
+     grid.text(
+       "Genus weights",
+       x = 0.05, y = 0.95,
+       just = c("left", "top"),
+       gp = gpar(fontsize = 10)
+     )
+     righe <- paste0(
+     names(database$results$genus_weights), " : ", round(database$results$genus_weights, 3))
+      grid.text(
+        paste(righe, collapse = "\n"),
+        x = 0.05, y = 0.90,
+        just = c("left", "top"),
+        gp = gpar(fontsize = 10, fontfamily = "mono")
+      )
+    }
+
   #disegno la pheatmap
   if(database$config$ispca==FALSE && database$config$whitemethod=="NOWHITE"){
-    if(iscore){
+    if(iscore && !isfam){
       dendofile <- readRDS("NOWHITE_isclr_isrelab_iscore.rds")
-      dendomap<-dendofile$results$distinputmatrix
-    }else{
+    }else if(iscore && isfam){
+      dendofile <- readRDS("NOWHITE_isclr_isrelab_iscore_isfam.rds")
+    }else if(!iscore && !isfam){
       dendofile <- readRDS("NOWHITE_isclr_isrelab_isfull.rds")
-      dendomap<-dendofile$results$distinputmatrix
+    }else{ #!iscore && isfam
+      dendofile <- readRDS("NOWHITE_isclr_isrelab_isfull_isfam.rds")
     }
+    dendomap<-dendofile$results$distinputmatrix
   }else{
     dendomap<-database$results$distinputmatrix
   }
@@ -125,7 +151,7 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   sil_width_by_cluster <- tapply(sil[, "sil_width"], sil[, "cluster"], mean)  
   cols <- rainbow(clusnum) 
   plot(sil, col=cols)
-  cat(filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file=txtoutfilename,sep=" ",append=TRUE)
+  cat("\n",filename,"clusnum=",clusnum,"element_xcclus=",as.numeric(table(dendo_cut))," avg_sil_width_all=",avg_sil_width_all,"  sil_width_xclus=",sil_width_by_cluster,"\n",file=txtoutfilename,sep=" ",append=TRUE)
 
 
   #clustering con snn inutile... mapporc
@@ -158,40 +184,57 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   # }
 
   #faccio loop kmeans se è euclidean
-  if(iskmeans && (database$config$distance=="euclidean" || database$config$distance=="manhattan" || database$config$distance=="maximum" || database$config$distance=="canberra" || database$config$distance=="binary" || database$config$distance=="minkowski"))
-    kmeans_end<-kmeans_loop_metrics(Y=t(dendomap), k_range = 2:10, plot_result=plot_result, dendo=database$results$dendo, distinputmatrix=dendomap, dendo_cut=dendo_cut, distance=database$config$distance)
+  if(iskmeans && (database$config$distance=="euclidean" || database$config$distance=="manhattan" || database$config$distance=="maximum" || database$config$distance=="canberra" || database$config$distance=="binary" || database$config$distance=="minkowski")){
+    kmeans_end<-kmeans_loop_metrics(Y=t(dendomap), k_range = 2:6, plot_result=plot_result, dendo=database$results$dendo, distinputmatrix=dendomap, dendo_cut=dendo_cut, distance=database$config$distance, txtoutfilename=txtoutfilename)
+    database$results$kmeans_end<-kmeans_end
+  }
 
   #UMAP analysis 0<kmin<180, 0<min_dist<0.99
 k_vals  <- c(10, 15, 15, 30)
 min_vals <- c(0.05, 0.1, 0.3, 0.1)
 
+res_umapdistmatrix<-vector("list", length(k_vals))
+mean_ari_kmeans_umap <- 0
+mean_ami_kmeans_umap <- 0
 for (i in seq_along(k_vals)) {
-  umap_res <- umap_from_distmatrix(
+  res<-umap_from_distmatrix(
     distmatrix_mat = distmatrix_mat,
     dendo_cut = dendo_cut,
-    dendo = dendo,
+    dendo = database$results$dendo,
     kvalue = k_vals[i],
     min_dist = min_vals[i],
     iskmeans = iskmeans,
     plot_result = plot_result,
     clusnum = clusnum,
     distinputmatrix = dendomap,
-    title=paste0("UMAP from distance matrix (k=", k_vals[i], ", min_dist=", min_vals[i], ")")
+    title=paste0("UMAP from distance matrix (k=", k_vals[i], ", min_dist=", min_vals[i], ")"),
+    txtoutfilename=txtoutfilename
   )
+  res_umapdistmatrix[[i]] <- res
+  mean_ari_kmeans_umap <- mean_ari_kmeans_umap+res$compare_res$ARI
+  mean_ami_kmeans_umap <- mean_ami_kmeans_umap+res$compare_res$AMI
 }
+avg_ami_kmeans_umap<-mean_ami_kmeans_umap/length(k_vals)
+avg_ari_kmeans_umap<-mean_ari_kmeans_umap/length(k_vals)
+cat("mean ami and ari across all UMAP k and min_dist combinations:\n", file=txtoutfilename,append=TRUE)
+cat("mean ami:", avg_ami_kmeans_umap, "mean ari:", avg_ari_kmeans_umap, "\n", file=txtoutfilename,append=TRUE)
+database$results$res_umapdistmatrix<-res_umapdistmatrix
+database$results$mean_ari_kmeans_umap<-avg_ari_kmeans_umap
+database$results$mean_ami_kmeans_umap<-avg_ami_kmeans_umap
 
   #tsne analysis perplexity<60
   perplexity_val  <- c(5, 10, 15, 30)
   for (i in seq_along(perplexity_val)) {
-    tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = perplexity_val[i], plot_result=plot_result, title(paste0("t-SNE from distance matrix (perplexity=", perplexity_val[i], ")"))
-    )
-  }
+    tsne_res<-tsne_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=dendo_cut, perplexity = perplexity_val[i], plot_result=plot_result, title=paste0("t-SNE from distance matrix (perplexity=", perplexity_val[i], ")"))
+    }
+  
+  saveRDS(database, file = rdsoutfilename)
 
-  return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename, txtoutfilename=txtoutfilename))
+  return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename, txtoutfilename=txtoutfilename, res_umapdistmatrix=res_umapdistmatrix))
 }
 
 
-compare_twoclustering<-function(first, second, firstfilename, secondfilename, txtoutfilename=NULL, folder="."){
+compare_twoclustering<-function(first, second, firstfilename, secondfilename, txtoutfilename=NULL, folder=".", txtlabel=NULL){
   #adjusted mutual information 0=randomico, 1=perfetto
   ami <- AMI(first, second)
   #adjusted rand index 0=randomico, 1=perfetto
@@ -213,21 +256,17 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
 
   # tabella allineata (colonne riordinate)
   cont_mat_align <- cont_tab[, perm, drop = FALSE]
-
-  # second riallineato (stessi valori, ma rinominati/riordinati per corrispondere a first)
-  second_levels <- colnames(cont_mat_align)
-  second_aligned <- factor(
-    second,
-    levels = second_levels,
-    labels = second_levels[perm]
-  )
+  row_sums <- rowSums(cont_mat_align)
+  col_sums <- colSums(cont_mat_align)
+  # matrice denominatore per normalizzare
+  den <- outer(row_sums, col_sums, "+")
+  # nuova matrice
+  cont_mat_ratio_pheatmap <- cont_mat_align / den
 
   # metriche “manuali”
   prop_row <- prop.table(cont_mat_align, 1)   # ogni riga somma a 1
   prop_col <- prop.table(cont_mat_align, 2)   # ogni colonna somma a 1
   overlap  <- sum(diag(cont_mat_align)) / sum(cont_mat_align)
-  round(prop_row, 2)
-  optimized_table<-table(first, second_aligned)
 
   #scrivo cose su pdf
   grid::grid.newpage()
@@ -238,12 +277,12 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
     gp = gpar(fontsize = 10)
   )
   grid.text(
-    sprintf("adjusted rand index 0=randomico, 1=perfetto\n ARI = %.3f\n adjusted mutual information 0=randomico, 1=perfetto \nAMI = %.3f", ari, ami),
+    sprintf("adjusted rand index 0=randomico, 1=perfetto ARI = %.3f\n adjusted mutual information 0=randomico, 1=perfetto AMI = %.3f\n overlap as sum of diagonal counts/all counts = %.3f", ari, ami, overlap),
     x = 0.05, y = 0.80,
     just = c("left", "top"),
     gp = gpar(fontsize = 10)
   )
-  tab_lines <- capture.output(print(optimized_table))
+  tab_lines <- capture.output(print(cont_mat_align))
   grid.text(
     paste("contingency table\n",paste(tab_lines, collapse = "\n")),
     x = 0.05, y = 0.60,
@@ -252,17 +291,20 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
   )
 
   pheatmap(
-    prop.table(optimized_table, 1),
+    cont_mat_ratio_pheatmap,
+    display_numbers = TRUE,
     cluster_rows = FALSE,
     cluster_cols = FALSE,
-    main = "Contingency table pheatmap"
+    main = "Contingency table ratio pheatmap"
   )
 
   #print results on txt file
   if(length(txtoutfilename)>0){
     outfilename=paste0(folder,"/",txtoutfilename)
-    cat("AMI=",ami,"ARI=",ari,"\n","\n",sep=" ",file=outfilename,append=TRUE)
+    if(!is.null(txtlabel)) cat(txtlabel,"\n",file=outfilename,append=TRUE)
+    cat("AMI=",ami,"ARI=",ari,"\n",sep=" ",file=outfilename,append=TRUE)
   }
+return(list(AMI=ami, ARI=ari, contingency_table=cont_mat_align))
 }
 
 ########################################################
@@ -280,7 +322,8 @@ applypca<-function(distinputmatrix, threshold=0.5){
 # Funzione wrapper per UMAP su distance matrix
 umap_from_distmatrix <- function(distmatrix_mat, dendo_cut, dendo,
                                  kvalue, min_dist,
-                                 plot_result = TRUE, iskmeans=FALSE, clusnum,distinputmatrix=NULL, title="UMAP from distance matrix") {
+                                 plot_result = TRUE, iskmeans=FALSE, clusnum,distinputmatrix=NULL, title="UMAP from distance matrix",
+                                 txtoutfilename=NULL) {
   # Controlli a caso
   stopifnot(is.matrix(distmatrix_mat))
   stopifnot(nrow(distmatrix_mat) == ncol(distmatrix_mat))
@@ -319,13 +362,13 @@ umap_from_distmatrix <- function(distmatrix_mat, dendo_cut, dendo,
 
   if(iskmeans){
     #faccio k means su umap
-    kmeans_end<-kmeans_single(umap_res, kclusnum=clusnum, plot_result = plot_result, label=labels, isumap=TRUE, distinputmatrix = distinputmatrix, dendo=dendo, dendo_cut=dendo_cut)  
-    compare_twoclustering(first = dendo_cut, second = kmeans_end$km$cluster, firstfilename="dendrogram clustering", secondfilename=paste0("kmeans on UMAP (",labels,")"))
+    kmeans_end<-kmeans_single(Y=umap_res, kclusnum=clusnum, plot_result = plot_result, label=labels, isumap=TRUE, distinputmatrix = distinputmatrix, dendo=dendo, dendo_cut=dendo_cut, txtoutfilename=txtoutfilename)  
+    compare_res<-compare_twoclustering(first = dendo_cut, second = kmeans_end$km$cluster, firstfilename="dendrogram clustering", secondfilename=paste0("kmeans on UMAP (",labels,")"), txtlabel=paste0("Compare kmeans on UMAP with dendrogram clustering (",labels,")"), txtoutfilename=txtoutfilename)
   }
 
 
   # Restituisci la matrice di coordinate
-  return(umap_res)
+  return(list(umap_res=umap_res, kmeans_end=kmeans_end, clusnum=clusnum, kvalue=kvalue, min_dist=min_dist, compare_res=compare_res))
 }
 
 
@@ -333,8 +376,8 @@ umap_from_distmatrix <- function(distmatrix_mat, dendo_cut, dendo,
 #k means loop   
 
 kmeans_loop_metrics <- function(Y,
-                                k_range = 3:10,
-                                plot_result = FALSE, dendo=NULL, distinputmatrix=NULL, dendo_cut=NULL, distance="euclidean") {
+                                k_range = 2:6,
+                                plot_result = FALSE, dendo=NULL, distinputmatrix=NULL, dendo_cut=NULL, distance="euclidean", txtoutfilename=NULL) {
 
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (any(k_range >= nrow(Y))) stop("All K must be < number of samples.")
@@ -351,7 +394,7 @@ kmeans_loop_metrics <- function(Y,
 
   for (i in seq_along(k_range)) {
     k <- k_range[i]
-    res <- kmeans_single(Y=Y, kclusnum=k, plot_result=plot_result, isumap=FALSE, distinputmatrix=distinputmatrix, dendo=dendo, dendo_cut=dendo_cut, distance=distance)
+    res <- kmeans_single(Y=Y, kclusnum=k, plot_result=plot_result, isumap=FALSE, distinputmatrix=distinputmatrix, dendo=dendo, dendo_cut=dendo_cut, distance=distance, txtoutfilename=txtoutfilename)
     res_list[[i]] <- res
     wss[i] <- res$metrics$WSS
     sil_avg[i] <- res$metrics$Silhouette
@@ -380,11 +423,7 @@ kmeans_loop_metrics <- function(Y,
     abline(v = best_k, lty = 2)
   }
 
-  list(
-    results = res_list,   
-    metrics = metrics,
-    best_k = best_k
-  )
+  return(list(results = res_list,metrics = metrics,best_k = best_k))
 }
 
 ######################
@@ -398,7 +437,8 @@ kmeans_single <- function(Y,
                           distinputmatrix,
                           dendo,
                           dendo_cut,
-                          distance="euclidean"
+                          distance="euclidean",
+                          txtoutfilename=NULL
                           ) {
 
   #controlli di base
@@ -433,7 +473,11 @@ if (plot_result) {
     mydendo_picture<-dendo_picture(distinputmatrix=distinputmatrix, clus_method="euclidean", dendo=dendo, other_cluster=km$cluster, split_by_other=TRUE, hasnoise=FALSE, title=paste0("kmeans with K=", kclusnum))
     print(mydendo_picture)  
     if(kclusnum==clusnum){
-      compare_twoclustering(first = dendo_cut, second = km$cluster, firstfilename="dendrogram clustering", secondfilename="kmeans with same number of clusters")
+      if(isumap)
+        textlabel=paste0("Compare kmeans on UMAP with dendrogram clustering (k=", kclusnum, ")")
+      else
+        textlabel=paste0("Compare kmeans with dendrogram clustering (k=", kclusnum, ")")
+      compare_twoclustering(first = dendo_cut, second = km$cluster, firstfilename="dendrogram clustering", secondfilename="kmeans with same number of clusters", txtlabel=textlabel, txtoutfilename=txtoutfilename)
     }
   if(isumap){
     plot(Y[, 1], Y[, 2],
@@ -446,8 +490,8 @@ if (plot_result) {
             legend = sort(unique(km$cluster)),
             col = sort(unique(km$cluster)),
             pch = 19, bty = "n")
+    cat("kmeans_on_umap: kclusnum=",kclusnum, label," sil_avg=",signif(sil_avg, 3),"\n",file=txtoutfilename,sep=" ",append=TRUE)  
   }
-  # grid::grid.newpage()
   plot(sil,
         main = paste0("kmeans_single silhouette (avg=", signif(sil_avg, 3), ", clusnum=", kclusnum, ")"),
         border = NA)
@@ -460,81 +504,6 @@ if (plot_result) {
   )
 
   return(kmeans_end)
-}
-
-##################################################
-
-snn_single <- function(distmatrix_mat,
-                      k, eps, minPts,
-                       distinputmatrix,         # matrice feature×campioni per dendo/pheatmap
-                       plot_result = TRUE,
-                       dendo=dendo,
-                       minclusnum=2, 
-                       maxclusnum=10,
-                       maxnoise_percent=15 #percentuale massima di noise accettabile per disegnare risultati
-                       ) {
-
-  # --- clustering ---
-  X_snn<-as.dist(distmatrix_mat)
-  snn <- dbscan::sNNclust(X_snn, k = k, eps = eps, minPts = minPts)
-  cl <- snn$cluster
-  cl <- ifelse(cl == 0, 104, cl) #sostituisco 15 a noise per colore plot
-  names(cl) <- colnames(distmatrix_mat) #assegno nomi   
-  # check cluster e noise
-  n_noise <- sum(cl == 104)
-  n_clusters <- length(setdiff(unique(cl), 104)) # toglie elementi di noise che hanno cluster==104
-  maxnoise_num=maxnoise_percent*length(cl)/100
-
-  # silhouette su spazio originale (escludendo noise=104) 
-  if (n_clusters >= minclusnum && n_clusters <= maxclusnum && n_noise <= maxnoise_num ) {
-    sil <- NULL
-    sil_avg <- NA_real_
-    keep <- cl !=104
-    d_keep<-as.dist(distmatrix_mat[keep, keep, drop = FALSE])
-    sil <- cluster::silhouette(cl[keep], d_keep)
-    sil_avg <- mean(sil[, "sil_width"])
-
-  # --- plotting ---
-    if(plot_result) {
-      #dendo/pheatmap split
-      distinputmatrix <- as.matrix(distinputmatrix)  # feature×campioni
-      # check: colonne devono essere campioni
-      missing2 <- setdiff(colnames(distinputmatrix), names(cl))
-      if (length(missing2) > 0) {
-        stop(paste0("distinputmatrix columns not found in cluster labels: ", paste(missing2, collapse = ", ")))
-      }
-
-      mydendo_picture<-dendo_picture(distinputmatrix = distinputmatrix, clus_method="euclidean", dendo=dendo, other_cluster=cl, split_by_other=TRUE, hasnoise=TRUE, title=paste0("SNN clustering (k=", k, ", eps=", eps, ", minPts=", minPts, ")"))
-
-      umap_res <- umap_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=cl, dendo=dendo, kvalue=10, min_dist=0.05, plot_result=TRUE, iskmeans=FALSE, distinputmatrix=distinputmatrix, title=paste0("SNN clustering (k=", k, ", eps=", eps, ", minPts=", minPts, ")"))
-
-      #silhouette
-      if(!is.null(sil)) {
-        plot(sil, main = paste0("SNN silhouette on ORIGINAL space (avg=", signif(sil_avg, 3), ")"),   border = NA)
-      }
-    }
-
-    tobereturned<-list(
-      cluster = cl,
-      n_clusters = n_clusters,
-      n_noise = n_noise,
-      sil = sil,
-      sil_avg = sil_avg,
-      params = list(k = k, eps = eps, minPts = minPts),
-      isok=TRUE
-    )
-  }    
-  tobereturned<-list(
-    cluster = cl,
-    n_clusters = n_clusters,
-    cluster_sizes = table(cl),
-    n_noise = n_noise,
-    sil = NULL,
-    sil_avg = NA_real_,
-    params = list(k = k, eps = eps, minPts = minPts),
-    isok=FALSE
-  )
-    return(tobereturned)
 }
 
 ########################################################
@@ -623,11 +592,13 @@ print_config_on_pdf <- function(config_list, x = 0.05, y = 0.95, fontsize = 10, 
 correlation_plot <- function(distinputmatrix, title="Correlation plot", method="pearson", plot_result=TRUE) {
   distinputmatrix <- as.matrix(distinputmatrix)
   cor_mat <- cor(distinputmatrix, method = method)
+  cor_dist <- as.dist(1 - cor_mat)
+  hc <- hclust(cor_dist, method = "average")
   range <- 1
   colorsnum <- 20
   mycolors <- colorRampPalette(c("navy", "white", "red"))(colorsnum)
   mybreaks <- seq(-range, range, length.out = colorsnum + 1)
-  pheatmap(cor_mat, main=paste(title, "method=", method), cluster_rows = FALSE, cluster_cols = FALSE, breaks=mybreaks, color=mycolors )
+  pheatmap(cor_mat, main=paste(title, "method=", method), cluster_rows = hc, cluster_cols = hc, breaks=mybreaks, color=mycolors )
 
   # Metti NA sulla diagonale per escluderla
   diag(cor_mat) <- NA
@@ -682,6 +653,81 @@ correlation_plot <- function(distinputmatrix, title="Correlation plot", method="
 
 
 ######################################## old not used anymore functions ########################################  
+
+##################################################
+
+snn_single <- function(distmatrix_mat,
+                      k, eps, minPts,
+                       distinputmatrix,         # matrice feature×campioni per dendo/pheatmap
+                       plot_result = TRUE,
+                       dendo=dendo,
+                       minclusnum=2, 
+                       maxclusnum=10,
+                       maxnoise_percent=15 #percentuale massima di noise accettabile per disegnare risultati
+                       ) {
+
+  # --- clustering ---
+  X_snn<-as.dist(distmatrix_mat)
+  snn <- dbscan::sNNclust(X_snn, k = k, eps = eps, minPts = minPts)
+  cl <- snn$cluster
+  cl <- ifelse(cl == 0, 104, cl) #sostituisco 15 a noise per colore plot
+  names(cl) <- colnames(distmatrix_mat) #assegno nomi   
+  # check cluster e noise
+  n_noise <- sum(cl == 104)
+  n_clusters <- length(setdiff(unique(cl), 104)) # toglie elementi di noise che hanno cluster==104
+  maxnoise_num=maxnoise_percent*length(cl)/100
+
+  # silhouette su spazio originale (escludendo noise=104) 
+  if (n_clusters >= minclusnum && n_clusters <= maxclusnum && n_noise <= maxnoise_num ) {
+    sil <- NULL
+    sil_avg <- NA_real_
+    keep <- cl !=104
+    d_keep<-as.dist(distmatrix_mat[keep, keep, drop = FALSE])
+    sil <- cluster::silhouette(cl[keep], d_keep)
+    sil_avg <- mean(sil[, "sil_width"])
+
+  # --- plotting ---
+    if(plot_result) {
+      #dendo/pheatmap split
+      distinputmatrix <- as.matrix(distinputmatrix)  # feature×campioni
+      # check: colonne devono essere campioni
+      missing2 <- setdiff(colnames(distinputmatrix), names(cl))
+      if (length(missing2) > 0) {
+        stop(paste0("distinputmatrix columns not found in cluster labels: ", paste(missing2, collapse = ", ")))
+      }
+
+      mydendo_picture<-dendo_picture(distinputmatrix = distinputmatrix, clus_method="euclidean", dendo=dendo, other_cluster=cl, split_by_other=TRUE, hasnoise=TRUE, title=paste0("SNN clustering (k=", k, ", eps=", eps, ", minPts=", minPts, ")"))
+
+      res_umapdistmatrix <- umap_from_distmatrix(distmatrix_mat=distmatrix_mat, dendo_cut=cl, dendo=dendo, kvalue=10, min_dist=0.05, plot_result=TRUE, iskmeans=FALSE, distinputmatrix=distinputmatrix, title=paste0("SNN clustering (k=", k, ", eps=", eps, ", minPts=", minPts, ")"))
+
+      #silhouette
+      if(!is.null(sil)) {
+        plot(sil, main = paste0("SNN silhouette on ORIGINAL space (avg=", signif(sil_avg, 3), ")"),   border = NA)
+      }
+    }
+
+    tobereturned<-list(
+      cluster = cl,
+      n_clusters = n_clusters,
+      n_noise = n_noise,
+      sil = sil,
+      sil_avg = sil_avg,
+      params = list(k = k, eps = eps, minPts = minPts),
+      isok=TRUE
+    )
+  }    
+  tobereturned<-list(
+    cluster = cl,
+    n_clusters = n_clusters,
+    cluster_sizes = table(cl),
+    n_noise = n_noise,
+    sil = NULL,
+    sil_avg = NA_real_,
+    params = list(k = k, eps = eps, minPts = minPts),
+    isok=FALSE
+  )
+    return(tobereturned)
+}
 
 
 #########################
