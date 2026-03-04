@@ -88,7 +88,6 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   isfam<-database$config$isfam
   sil<-silhouette(dendo_cut, dmatrix=distmatrix_mat, do.clus.stat=TRUE, do.n.k=TRUE,do.col.sort=TRUE)
   filename_noext<-tools::file_path_sans_ext(filename)
-  database$config$databasename<-filename_noext
   if(noprint){
     return(list(sil=sil, dendo_cut=dendo_cut,distmatrix=database$results$distmatrix, filename=filename_noext, txtoutfilename=txtoutfilename))
   }
@@ -100,6 +99,7 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
     pdf(file=filename_nopath)
   }
   rdsoutfilename<-paste0(folder,"/",filename_noext,"_analysis.RDS")
+  database$config$rdsoutfilename<-rdsoutfilename
   grid::grid.newpage()
   print_config_on_pdf(database$config)
 
@@ -196,6 +196,7 @@ min_vals <- c(0.05, 0.1, 0.3, 0.1)
 res_umapdistmatrix<-vector("list", length(k_vals))
 mean_ari_kmeans_umap <- 0
 mean_ami_kmeans_umap <- 0
+mean_overlap_kmeans_umap<-0
 for (i in seq_along(k_vals)) {
   res<-umap_from_distmatrix(
     distmatrix_mat = distmatrix_mat,
@@ -213,14 +214,17 @@ for (i in seq_along(k_vals)) {
   res_umapdistmatrix[[i]] <- res
   mean_ari_kmeans_umap <- mean_ari_kmeans_umap+res$compare_res$ARI
   mean_ami_kmeans_umap <- mean_ami_kmeans_umap+res$compare_res$AMI
+  mean_overlap_kmeans_umap <- mean_overlap_kmeans_umap+res$compare_res$overlap
 }
 avg_ami_kmeans_umap<-mean_ami_kmeans_umap/length(k_vals)
 avg_ari_kmeans_umap<-mean_ari_kmeans_umap/length(k_vals)
-cat("mean ami and ari across all UMAP k and min_dist combinations:\n", file=txtoutfilename,append=TRUE)
-cat("mean ami:", avg_ami_kmeans_umap, "mean ari:", avg_ari_kmeans_umap, "\n", file=txtoutfilename,append=TRUE)
+avg_overlap_kmeans_umap<-mean_overlap_kmeans_umap/length(k_vals)
+cat("mean ami and ari and overlap across all UMAP k and min_dist combinations:\n", file=txtoutfilename,append=TRUE)
+cat("mean ami:", avg_ami_kmeans_umap, "mean ari:", avg_ari_kmeans_umap, "mean overlap:", avg_overlap_kmeans_umap, "\n", file=txtoutfilename,append=TRUE)
 database$results$res_umapdistmatrix<-res_umapdistmatrix
 database$results$mean_ari_kmeans_umap<-avg_ari_kmeans_umap
 database$results$mean_ami_kmeans_umap<-avg_ami_kmeans_umap
+database$results$mean_overlap_kmeans_umap<-avg_overlap_kmeans_umap
 
   #tsne analysis perplexity<60
   perplexity_val  <- c(5, 10, 15, 30)
@@ -260,12 +264,7 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
   col_sums <- colSums(cont_mat_align)
   # matrice denominatore per normalizzare
   den <- outer(row_sums, col_sums, "+")
-  # nuova matrice
   cont_mat_ratio_pheatmap <- cont_mat_align / den
-
-  # metriche “manuali”
-  prop_row <- prop.table(cont_mat_align, 1)   # ogni riga somma a 1
-  prop_col <- prop.table(cont_mat_align, 2)   # ogni colonna somma a 1
   overlap  <- sum(diag(cont_mat_align)) / sum(cont_mat_align)
 
   #scrivo cose su pdf
@@ -302,9 +301,9 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
   if(length(txtoutfilename)>0){
     outfilename=paste0(folder,"/",txtoutfilename)
     if(!is.null(txtlabel)) cat(txtlabel,"\n",file=outfilename,append=TRUE)
-    cat("AMI=",ami,"ARI=",ari,"\n",sep=" ",file=outfilename,append=TRUE)
+    cat("AMI=",ami,"ARI=",ari, "overlap=",overlap,"\n",sep=" ",file=outfilename,append=TRUE)
   }
-return(list(AMI=ami, ARI=ari, contingency_table=cont_mat_align))
+return(list(AMI=ami, ARI=ari, overlap=overlap, contingency_table=cont_mat_align))
 }
 
 ########################################################
