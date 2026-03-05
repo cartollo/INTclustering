@@ -31,9 +31,9 @@ dendo_picture<-function(distinputmatrix, clus_method, dendo, other_cluster = NUL
   #se è kmeans o snn o altro metodo per clustering e quindi faccio solo disegno senza clustering:
   if (split_by_other) {
     missing <- setdiff(colnames(distinputmatrix), names(other_cluster))
-    if (length(missing) > 0) {
-      stop(paste0("Missing labels for samples: ", paste(missing, collapse = ", ")))
-    }
+    # if (length(missing) > 0) {
+    #   stop(paste0("Missing labels for samples: ", paste(missing, collapse = ", ")))
+    # }#TODO:da capire per caso subsampled
     cl_raw <- other_cluster[colnames(distinputmatrix)]
     annotation_col <- data.frame(cluster = factor(cl_raw))
     rownames(annotation_col) <- colnames(distinputmatrix)
@@ -140,8 +140,8 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
 
   #correlazioni:
   # grid::grid.newpage()
-  correlation_plot(distinputmatrix=t(dendomap), method="pearson")
-  correlation_plot(distinputmatrix=t(dendomap), method="spearman")
+  correlation_plot(distinputmatrix=t(database$results$distinputmatrix), method="pearson")
+  correlation_plot(distinputmatrix=t(database$results$distinputmatrix), method="spearman")
 
   #dendo picture iniziale
   mydendo_picture<-dendo_picture(distinputmatrix=dendomap, clus_method=database$config$clus_method, dendo=database$results$dendo, clusnum=clusnum, title="Dendrogram clustering")
@@ -238,7 +238,14 @@ database$results$mean_overlap_kmeans_umap<-avg_overlap_kmeans_umap
 }
 
 
-compare_twoclustering<-function(first, second, firstfilename, secondfilename, txtoutfilename=NULL, folder=".", txtlabel=NULL){
+compare_twoclustering<-function(first, second, firstfilename, secondfilename, txtoutfilename=NULL, folder=".", txtlabel=NULL, plot_result=TRUE){
+  
+  #equalize first and second due to possiblity of subsampling
+  if(length(first)>length(second))
+    first<-first[names(first)%in%names(second)]  
+  if(length(first)<length(second))
+    second<-second[names(second)%in%names(first)]  
+
   #adjusted mutual information 0=randomico, 1=perfetto
   ami <- AMI(first, second)
   #adjusted rand index 0=randomico, 1=perfetto
@@ -268,35 +275,36 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
   overlap  <- sum(diag(cont_mat_align)) / sum(cont_mat_align)
 
   #scrivo cose su pdf
-  grid::grid.newpage()
-  grid.text(
-    paste("Clustering comparison between:\n",firstfilename,"\n", secondfilename),
-    x = 0.05, y = 0.95,
-    just = c("left", "top"),
-    gp = gpar(fontsize = 10)
-  )
-  grid.text(
-    sprintf("adjusted rand index 0=randomico, 1=perfetto ARI = %.3f\n adjusted mutual information 0=randomico, 1=perfetto AMI = %.3f\n overlap as sum of diagonal counts/all counts = %.3f", ari, ami, overlap),
-    x = 0.05, y = 0.80,
-    just = c("left", "top"),
-    gp = gpar(fontsize = 10)
-  )
-  tab_lines <- capture.output(print(cont_mat_align))
-  grid.text(
-    paste("contingency table\n",paste(tab_lines, collapse = "\n")),
-    x = 0.05, y = 0.60,
-    just = c("left", "top"),
-    gp = gpar(fontsize = 10, fontfamily = "mono")
-  )
+  if(plot_result){
+    grid::grid.newpage()
+    grid.text(
+      paste("Clustering comparison between:\n",firstfilename,"\n", secondfilename),
+      x = 0.05, y = 0.95,
+      just = c("left", "top"),
+      gp = gpar(fontsize = 10)
+    )
+    grid.text(
+      sprintf("adjusted rand index 0=randomico, 1=perfetto ARI = %.3f\n adjusted mutual information 0=randomico, 1=perfetto AMI = %.3f\n overlap as sum of diagonal counts/all counts = %.3f", ari, ami, overlap),
+      x = 0.05, y = 0.80,
+      just = c("left", "top"),
+      gp = gpar(fontsize = 10)
+    )
+    tab_lines <- capture.output(print(cont_mat_align))
+    grid.text(
+      paste("contingency table\n",paste(tab_lines, collapse = "\n")),
+      x = 0.05, y = 0.60,
+      just = c("left", "top"),
+      gp = gpar(fontsize = 10, fontfamily = "mono")
+    )
 
-  pheatmap(
-    cont_mat_ratio_pheatmap,
-    display_numbers = TRUE,
-    cluster_rows = FALSE,
-    cluster_cols = FALSE,
-    main = "Contingency table ratio pheatmap"
-  )
-
+    pheatmap(
+      cont_mat_ratio_pheatmap,
+      display_numbers = TRUE,
+      cluster_rows = FALSE,
+      cluster_cols = FALSE,
+      main = "Contingency table ratio pheatmap"
+    )
+  }
   #print results on txt file
   if(length(txtoutfilename)>0){
     outfilename=paste0(folder,"/",txtoutfilename)
@@ -650,6 +658,15 @@ correlation_plot <- function(distinputmatrix, title="Correlation plot", method="
 
 }
 
+
+create_histo<-function(x, main, xlab, ylab=NULL){
+  hist(x=x, main=main, xlab=xlab, ylab=ylab)
+  meanvalue<-mean(x)
+  stdvalue<-sd(x)
+  lengthvalue<-length(x)
+  abline(v = meanvalue, lty = 2)
+  legend("topright", legend = c(paste(format(meanvalue, digits=3),":Mean" ),paste(format(stdvalue,digits=3),":Dev std"),paste(format(lengthvalue,digits=3),":Entries")))
+}
 
 ######################################## old not used anymore functions ########################################  
 
