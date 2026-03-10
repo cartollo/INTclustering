@@ -21,7 +21,7 @@ echo "primo file : $FILE_RDS"
 echo "seconod file: $FILE_ISCORE"
 echo "===================================="
 
-for k in {2..10}; do
+for k in {2..6}; do
   echo "Lancio k=$k"
   
   Rscript compDisMatrix.R \

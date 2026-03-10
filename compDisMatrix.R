@@ -12,6 +12,8 @@
 # install.packages("clue")
 # install.packages("aricode")
 # install.packages("dbscan")
+# install.packages("fitdistrplus")
+library(fitdistrplus)
 library(Rtsne)
 library(dbscan)
 library(clue)

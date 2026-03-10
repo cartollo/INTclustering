@@ -86,6 +86,7 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   distmatrix_mat=as.matrix(database$results$distmatrix)
   iscore<-database$config$iscore
   isfam<-database$config$isfam
+  isshotgun<-database$config$isshotgun
   sil<-silhouette(dendo_cut, dmatrix=distmatrix_mat, do.clus.stat=TRUE, do.n.k=TRUE,do.col.sort=TRUE)
   filename_noext<-tools::file_path_sans_ext(filename)
   if(noprint){
@@ -95,10 +96,10 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   if(newfile){
     txtoutfilename<-paste0(folder,"/",filename_noext,"_analysis.txt")
     database$txtoutfilename<-txtoutfilename
-    filename_nopath<-paste0(folder,"/",filename_noext,"clusnum_",clusnum,"_analysis.pdf")
+    filename_nopath<-paste0(folder,"/",filename_noext,"_clusnum",clusnum,"_analysis.pdf")
     pdf(file=filename_nopath)
   }
-  rdsoutfilename<-paste0(folder,"/",filename_noext,"_analysis.RDS")
+  rdsoutfilename<-paste0(folder,"/",filename_noext,"_clusnum",clusnum,"_analysis.RDS")
   database$config$rdsoutfilename<-rdsoutfilename
   grid::grid.newpage()
   print_config_on_pdf(database$config)
@@ -123,7 +124,7 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
     }
 
   #disegno la pheatmap
-  if(database$config$ispca==FALSE && database$config$whitemethod=="NOWHITE"){
+  if(database$config$ispca==FALSE && database$config$whitemethod=="NOWHITE" && FALSE){ #tanto jaccard e bray-curtis per ora sono stati eliminati
     if(iscore && !isfam){
       dendofile <- readRDS("NOWHITE_isclr_isrelab_iscore.rds")
     }else if(iscore && isfam){
@@ -241,10 +242,10 @@ database$results$mean_overlap_kmeans_umap<-avg_overlap_kmeans_umap
 compare_twoclustering<-function(first, second, firstfilename, secondfilename, txtoutfilename=NULL, folder=".", txtlabel=NULL, plot_result=TRUE){
   
   #equalize first and second due to possiblity of subsampling
-  if(length(first)>length(second))
-    first<-first[names(first)%in%names(second)]  
-  if(length(first)<length(second))
-    second<-second[names(second)%in%names(first)]  
+  # if(length(first)>length(second))
+  common_patients <- intersect(names(first), names(second))
+  first<-first[common_patients]  
+  second<-second[common_patients]  
 
   #adjusted mutual information 0=randomico, 1=perfetto
   ami <- AMI(first, second)
@@ -276,9 +277,20 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
 
   #scrivo cose su pdf
   if(plot_result){
+    # longtext<-paste("Clustering comparison between:",  strwrap(firstfilename, width = 50),   strwrap(secondfilename, width = 50), sep="\n")
+    longtext <- paste( 
+      c(
+      "Clustering comparison between:",
+      "",
+      strwrap(firstfilename, width = 50),
+      "",
+      strwrap(secondfilename, width = 50)
+      ),
+      collapse = "\n"
+    )
     grid::grid.newpage()
     grid.text(
-      paste("Clustering comparison between:\n",firstfilename,"\n", secondfilename),
+      label=longtext,
       x = 0.05, y = 0.95,
       just = c("left", "top"),
       gp = gpar(fontsize = 10)
@@ -507,7 +519,8 @@ if (plot_result) {
   kmeans_end <- list(
     kmeans = km,
     metrics = metrics,
-    silhouette = sil
+    silhouette = sil,
+    isumap=isumap
   )
 
   return(kmeans_end)
@@ -659,14 +672,31 @@ correlation_plot <- function(distinputmatrix, title="Correlation plot", method="
 }
 
 
-create_histo<-function(x, main, xlab, ylab=NULL){
-  hist(x=x, main=main, xlab=xlab, ylab=ylab)
+create_histo<-function(x, main, xlab, ylab=NULL, breaks=20, fitmethod=NULL, xlim=c(-1,1)){
+  histo<-hist(x=x, main=main, xlab=xlab, ylab=ylab, breaks=breaks, xlim=xlim)
   meanvalue<-mean(x)
   stdvalue<-sd(x)
   lengthvalue<-length(x)
   abline(v = meanvalue, lty = 2)
-  legend("topright", legend = c(paste(format(meanvalue, digits=3),":Mean" ),paste(format(stdvalue,digits=3),":Dev std"),paste(format(lengthvalue,digits=3),":Entries")))
+  legend("topright", legend = c(paste(formatC(lengthvalue,format="e",digits=2),":Entries"),paste(formatC(meanvalue, format="e", digits=2),":Mean" ),paste(formatC(stdvalue, format="e",digits=2),":Dev std")))
+  if(length(fitmethod)>0){
+    if(fitmethod=="gaus"){
+      fittedhisto<-fit_histo(h=histo,  formula=y ~ gauss_fun(x, A, mu, sigma), start_vals=list(A=lengthvalue,mu = meanvalue, sigma= stdvalue))
+      fitpar<-coef(fittedhisto)
+      curve(gauss_fun(x, fitpar["A"], fitpar["mu"], fitpar["sigma"]), add=TRUE, col="red")
+      legend(  "topright",inset=c(0.0,0.25), legend = c(paste(formatC(fitpar["mu"], format="e",digits=2),":Fitted Mean" ),paste(formatC(fitpar["sigma"],format="e",digits=2),":Fitted Devstd")))
+    }
+  }
 }
+
+fit_histo <- function(h, formula, start_vals) {
+  df <- data.frame(y = h$counts, x = h$mids)
+  fit <- nls(formula,data = df,start = start_vals)
+  return(fit) 
+}
+
+#definizioni di funzioni
+gauss_fun <- function(x, A, mu, sigma) {A * exp(-(x - mu)^2 / (2 * sigma^2))}
 
 ######################################## old not used anymore functions ########################################  
 

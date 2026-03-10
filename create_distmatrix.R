@@ -1,9 +1,15 @@
 options(error=function() { traceback(2); if(!interactive()) quit("no", status = 1, runLast = FALSE) })
 
 
-create_db<-function(seed=123, clusnum=0, distance="correlation", clus_method="average", iscore=TRUE, isweighted=FALSE, isclr=TRUE, ispca=FALSE, ispcoa=FALSE, isrelab=FALSE, whitemethod="NOWHITE", zeroimpmethod="CZM", iscreatedatabase=FALSE, inputfile="/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData", isfam=TRUE, subsample_size=-1, outputfilelable="", folderoutput="."){
+create_db<-function(seed=123, clusnum=0, distance="correlation", clus_method="average", iscore=TRUE, isweighted=FALSE, isclr=TRUE, ispca=FALSE, ispcoa=FALSE, isrelab=FALSE, whitemethod="NOWHITE", zeroimpmethod="CZM", iscreatedatabase=FALSE, inputfile="/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData", isfam=FALSE, subsample_size=-1, outputfilelable="", folderoutput="."){
 set.seed(seed)
 
+if(grepl("shotgun",inputfile))
+  isshotgun<-TRUE
+else 
+  isshotgun<-FALSE
+
+print(paste("isshotgut=",isshotgun))
 
 #do some checks
 if(isclr && (distance=="bray_curtis" || distance=="jaccard")){
@@ -28,7 +34,8 @@ if (isclr) {outputprefix <- paste(outputprefix, "isclr", sep = "_")}
 if (isrelab) { outputprefix <- paste(outputprefix, "isrelab", sep = "_")}
 if(ispca){outputprefix <- paste(outputprefix, "ispca", sep = "_")}
 if(ispcoa){outputprefix <- paste(outputprefix, "ispcoa", sep = "_")}
-if(isfam){outputprefix <- paste(outputprefix, "isfam", sep = "_")}
+if(isshotgun){outputprefix <- paste(outputprefix, "shotgun", sep = "_")}
+else if(isfam){outputprefix <- paste(outputprefix, "isfam", sep = "_")}
 
 tobesaved<-list(
   config=list(
@@ -43,7 +50,8 @@ tobesaved<-list(
     whitemethod=whitemethod,
     zeroimpmethod=zeroimpmethod,
     inputfile=inputfile,
-    isfam=isfam
+    isfam=isfam,
+    isshotgun=isshotgun
   )
 )
 
@@ -87,25 +95,33 @@ source("myRfunc.R", keep.source = TRUE)
 load(file = inputfile, verbose = TRUE)
 # object ML.data
 
-if(isfam){
-  ML.dis.baseline.gen <- ML.data$OTU$dis$fam$bas
-  ML.val.baseline.gen <- ML.data$OTU$val$fam$bas
+if(isshotgun){
+  ML.baseline.gen<-M_mph
+  isfam=FALSE
+  isrelab=TRUE
 }else{
-  ML.dis.baseline.gen <- ML.data$OTU$dis$gen$bas
-  ML.val.baseline.gen <- ML.data$OTU$val$gen$bas
+  if(isfam){
+    ML.dis.baseline.gen <- ML.data$OTU$dis$fam$bas
+    ML.val.baseline.gen <- ML.data$OTU$val$fam$bas
+  }else{
+    ML.dis.baseline.gen <- ML.data$OTU$dis$gen$bas
+    ML.val.baseline.gen <- ML.data$OTU$val$gen$bas
+  }
+
+  # Merge discovery and validation dataset
+  ML.dis.baseline.gen$genus <- rownames(ML.dis.baseline.gen)
+  ML.val.baseline.gen$genus <- rownames(ML.val.baseline.gen)
+  ML.baseline.gen <- merge(ML.dis.baseline.gen, ML.val.baseline.gen, by = "genus", all = TRUE)
+  rownames(ML.baseline.gen) <- ML.baseline.gen$genus
+  ML.baseline.gen$genus <- NULL # cancello colonna ridondante
 }
 
+if(!isshotgun){
+  ML.baseline.gen[is.na(ML.baseline.gen)] <- 0 # isnan allora mette 0 (ci sono vari invalid number in tabella)
+  # se una cella ha meno di 10 conteggi assegna 0
+  ML.baseline.gen[ML.baseline.gen < 10] <- 0
+}
 
-# Merge discovery and validation dataset
-ML.dis.baseline.gen$genus <- rownames(ML.dis.baseline.gen)
-ML.val.baseline.gen$genus <- rownames(ML.val.baseline.gen)
-ML.baseline.gen <- merge(ML.dis.baseline.gen, ML.val.baseline.gen, by = "genus", all = TRUE)
-rownames(ML.baseline.gen) <- ML.baseline.gen$genus
-ML.baseline.gen$genus <- NULL # cancello colonna ridondante
-
-ML.baseline.gen[is.na(ML.baseline.gen)] <- 0 # isnan allora mette 0 (ci sono vari invalid number in tabella)
-# se una cella ha meno di 10 conteggi assegna 0
-ML.baseline.gen[ML.baseline.gen < 10] <- 0
 # righe/colonne che contengono solo 0 o NA vengono rimosse
 ML.baseline.gen <- ML.baseline.gen[
   rowSums(ML.baseline.gen, na.rm = TRUE) > 0,
