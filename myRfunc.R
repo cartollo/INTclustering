@@ -688,6 +688,12 @@ create_histo<-function(x, main, xlab, ylab=NULL, breaks=20, fitmethod=NULL, xlim
       curve(gauss_fun(x, fitpar["A"], fitpar["mu"], fitpar["sigma"]), add=TRUE, col="red")
       legend(  "topright",inset=c(0.0,0.25), legend = c(paste(formatC(fitpar["mu"], format="e",digits=2),":Fitted Mean" ),paste(formatC(fitpar["sigma"],format="e",digits=2),":Fitted Devstd")))
     }
+    if(fitmethod=="gauspeak"){
+      fittedhisto<-fit_gauss_peak(x=x, h=histo)
+      fitpar<-coef(fittedhisto)
+      curve(gauss_fun(x, fitpar["A"], fitpar["mu"], fitpar["sigma"]), add=TRUE, col="red")
+      legend(  "topright",inset=c(0.0,0.25), legend = c(paste(formatC(fitpar["mu"], format="e",digits=2),":Fitted Mean" ),paste(formatC(fitpar["sigma"],format="e",digits=2),":Fitted Devstd")))
+    }
   }
 }
 
@@ -697,10 +703,29 @@ fit_histo <- function(h, formula, start_vals) {
   return(fit) 
 }
 
-# #create 2d histograms
-# create_2dhisto<-function(x,y,nbins=c(200,200),xlab,ylab){
+fit_gauss_peak <- function(x, h, half_width = 1) {
+  imax <- which.max(h$counts)
+  mu0  <- h$mids[imax]
 
-# }
+  sel <- h$mids >= (mu0 - half_width) & h$mids <= (mu0 + half_width)
+
+  df <- data.frame(
+    counts = h$counts[sel],
+    mids   = h$mids[sel]
+  )
+
+  fit <- nls(
+    counts ~ gauss_fun(mids, A, mu, sigma),
+    data = df,
+    start = list(
+      A = h$counts[imax],
+      mu = mu0,
+      sigma = half_width / 2
+    )
+  )
+
+  return(fit)
+}
 
 #definizioni di funzioni
 gauss_fun <- function(x, A, mu, sigma) {A * exp(-(x - mu)^2 / (2 * sigma^2))}
