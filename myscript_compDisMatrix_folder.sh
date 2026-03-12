@@ -12,7 +12,7 @@
 # done
 #!/bin/bash
 
-FOLDER="results/subsample_10_1000_16S_4clus_fam"
+FOLDER="results/subsample_10_1000_manhattan_wardd2_3clus_shotgun"
 MAX_JOBS=3
 
 mkdir -p "$FOLDER/logs"
@@ -26,7 +26,7 @@ for file in "$FOLDER"/*.rds; do
 
   Rscript compDisMatrix.R \
     -f "$file" \
-    -n 4 \
+    -n 3 \
     > "$FOLDER/logs/${name}.log" 2>&1 &
 
   while [[ $(jobs -r -p | wc -l) -ge $MAX_JOBS ]]; do

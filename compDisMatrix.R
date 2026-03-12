@@ -13,6 +13,8 @@
 # install.packages("aricode")
 # install.packages("dbscan")
 # install.packages("fitdistrplus")
+# install.packages("plotly")
+# install.packages("gplots")
 library(fitdistrplus)
 library(Rtsne)
 library(dbscan)

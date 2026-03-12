@@ -33,7 +33,8 @@ args <- parser$parse_args()
 clusnum<-args$clusnum
 isinteractive<-args$interactive
 #da commentare o scommentare
-isinteractive<-TRUE
+isinteractive<-FALSE
+# isinteractive<-TRUE
 
 #interactive:
 if(isinteractive==TRUE){

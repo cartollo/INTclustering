@@ -284,7 +284,9 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
       "",
       strwrap(firstfilename, width = 50),
       "",
-      strwrap(secondfilename, width = 50)
+      strwrap(secondfilename, width = 50),
+      "",
+      strwrap(txtlabel,width=50)
       ),
       collapse = "\n"
     )
@@ -297,14 +299,14 @@ compare_twoclustering<-function(first, second, firstfilename, secondfilename, tx
     )
     grid.text(
       sprintf("adjusted rand index 0=randomico, 1=perfetto ARI = %.3f\n adjusted mutual information 0=randomico, 1=perfetto AMI = %.3f\n overlap as sum of diagonal counts/all counts = %.3f", ari, ami, overlap),
-      x = 0.05, y = 0.80,
+      x = 0.05, y = 0.50,
       just = c("left", "top"),
       gp = gpar(fontsize = 10)
     )
     tab_lines <- capture.output(print(cont_mat_align))
     grid.text(
       paste("contingency table\n",paste(tab_lines, collapse = "\n")),
-      x = 0.05, y = 0.60,
+      x = 0.05, y = 0.30,
       just = c("left", "top"),
       gp = gpar(fontsize = 10, fontfamily = "mono")
     )
@@ -694,6 +696,11 @@ fit_histo <- function(h, formula, start_vals) {
   fit <- nls(formula,data = df,start = start_vals)
   return(fit) 
 }
+
+# #create 2d histograms
+# create_2dhisto<-function(x,y,nbins=c(200,200),xlab,ylab){
+
+# }
 
 #definizioni di funzioni
 gauss_fun <- function(x, A, mu, sigma) {A * exp(-(x - mu)^2 / (2 * sigma^2))}
