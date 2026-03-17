@@ -16,10 +16,10 @@ source("create_distmatrix.R", keep.source = TRUE)
 
   
 #su DRAP
-# inputfile="/Users/ymac/myINT/myemicrain/mountemicrain/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData"
+inputfile="/home/yun/EMICRAIN/Datasets/Microlearner/HNC/microbiome/shotgun/ML_data_shotgun_HNC.RData"
 #local
 # inputfile<-"/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/16S/ML_data_16S_HNC.RData"
-inputfile<-"/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/shotgun/ML_data_shotgun_HNC.RData"
+# inputfile<-"/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/shotgun/ML_data_shotgun_HNC.RData"
 # inputfile<-"/Users/ymac/Library/CloudStorage/OneDrive-FONDAZIONEIRCCSISTITUTONAZIONALEDEITUMORI/File\ di\ Iacovacci\ Jacopo\ -\ EMICRAIN/Datasets/Microlearner/HNC/microbiome/shotgun/ML_data_shotgun_HNC.RData"
 
 # for (i in 1:1000){
