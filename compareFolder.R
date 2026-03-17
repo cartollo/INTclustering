@@ -37,15 +37,17 @@ if(isfam){
   # reffile="results/subsample_10_1000_16S_genus/out_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_isclr_seed549_analysis.RDS"
 }
 if(isshotgun){
-  folder<-"results/subsample_10_1000_correlation_average_3clus_shotgun/"
+  # folder<-"results/subsample_10_1000_shotgun_3clus_correlation_average/"
+  folder<-"results/subsample_10_1000_spearman_average_3clus_shotgun"
   # folder<-"results/subsample_10_1000_euclidean_wardd2_3clus_shotgun"
   # reffile<-"results/euclidean_ward.D2_NOWHITE_CZM_isclr_shotgun/out_create_dismatrix_euclidean_ward.D2_NOWHITE_CZM_iscore_isclr_isrelab_shotgun_clusnum3_analysis.RDS"
-  reffile<-"results/correlation_average_NOWHITE_CZM_isclr_shotgun/out_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_isclr_shotgun_clusnum3_analysis.RDS"
+  # reffile<-"results/correlation_average_NOWHITE_CZM_isclr_shotgun/out_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_isclr_shotgun_clusnum3_analysis.RDS"
+  reffile<-"results/spearman_average_NOWHITE_CZM_isclr_3clus_shotgun/out_create_dismatrix_spearman_average_NOWHITE_CZM_iscore_isclr_isrelab_shotgun_clusnum3_analysis.RDS"
   # reffile<-"results/subsample_10_1000_correlation_average_3clus_shotgun/out_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_isclr_shotgun_seed99_analysis.RDS"
   # reffile<-"results/subsample_10_1000_3clus_shotgun/out_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_isclr_shotgun_seed54_analysis.RDS"
 }
 
-outputfile<-paste0(folder,"/","comparefolderouput_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_shotgun.pdf")
+outputfile<-paste0(folder,"/","comparefolderouput_create_dismatrix_spearman_average_NOWHITE_CZM_iscore_shotgun_clusnum_",clusnum,".pdf")
 pdf(file = outputfile) 
 
 databasea <- readRDS(reffile)
@@ -121,7 +123,8 @@ for (bcase in files) {
   for (i in seq_along(databasea$results$res_umapdistmatrix)) {
     res<-compare_twoclustering(
       first = databasea$results$res_umapdistmatrix[[i]]$kmeans_end$km$cluster,
-      second = databaseb$results$res_umapdistmatrix[[i]]$kmeans_end$km$cluster, firstfilename=firstfilename, 
+      second = databaseb$results$res_umapdistmatrix[[i]]$kmeans_end$km$cluster, 
+      firstfilename=firstfilename, 
       secondfilename=secondfilename, 
       txtoutfilename=txtoutfilename, 
       folder=folder, 
@@ -148,7 +151,8 @@ create_histo(x=max_min_diff_clus_overlap, main="maximum - minimum cluster overla
 create_histo(x=clus_size_diffmax, main="maximum - minimum cluster size for hierarchical clustering", xlab="clus_size_diffmax", fitmethod = fitmethod, xlim=c(0,180), breaks=90)
 create_histo(x=clus_size_max, main="cluster size maximum for hierarchical clustering", xlab="clus_size_max", fitmethod = fitmethod, xlim=c(0,180), breaks=90)
 create_histo(x=clus_size_min, main="cluster size minimum for hierarchical clustering", xlab="clus_size_max", fitmethod = fitmethod, xlim=c(0,180), breaks=90)
-create_histo(x=clus_size_median, main="medan cluster size for hierarchical clustering", xlab="clus_size_median", fitmethod = fitmethod, xlim=c(0,180), breaks=90)
+if(clusnum>2)
+  create_histo(x=clus_size_median, main="medan cluster size for hierarchical clustering", xlab="clus_size_median", fitmethod = fitmethod, xlim=c(0,180), breaks=90)
 
 #facciamo un paio di 2d histos
 hist2d(x=overlap_dendoclus,y=max_clus_overlap, xlab="overlap_dendoclus", ylab="max_clus_overlap")
@@ -157,14 +161,16 @@ hist2d(x=overlap_dendoclus,y=max_min_diff_clus_overlap, xlab="overlap_dendoclus"
 hist2d(x=overlap_dendoclus,y=clus_size_diffmax, xlab="overlap_dendoclus", ylab="clus_size_diffmax")
 hist2d(x=overlap_dendoclus,y=clus_size_max, xlab="overlap_dendoclus", ylab="clus_size_max")
 hist2d(x=overlap_dendoclus,y=clus_size_min, xlab="overlap_dendoclus", ylab="clus_size_min")
-hist2d(x=overlap_dendoclus,y=clus_size_median, xlab="overlap_dendoclus", ylab="clus_size_median")
+
+if(clusnum>2)
+  hist2d(x=overlap_dendoclus,y=clus_size_median, xlab="overlap_dendoclus", ylab="clus_size_median")
 
 for (i in seq_along(databasea$results$res_umapdistmatrix)) {
   create_histo(x=ami_kmean[i,],main=paste0("ami for kmeans on umap kvalue=",databasea$results$res_umapdistmatrix[[i]]$kvalue," min_dist=",databasea$results$res_umapdistmatrix[[i]]$min_dist), xlab="ami", fitmethod = fitmethod,xlim=c(-0.1,1.1), breaks=120)
   create_histo(x=ari_kmean[i,],main=paste0("ari for kmeans on umap kvalue=",databasea$results$res_umapdistmatrix[[i]]$kvalue," min_dist=",databasea$results$res_umapdistmatrix[[i]]$min_dist), xlab="ari", fitmethod = fitmethod,xlim=c(-0.1,1.1), breaks=120)
   create_histo(x=overlap_kmean[i,],main=paste0("overlap for kmeans on umap kvalue=",databasea$results$res_umapdistmatrix[[i]]$kvalue," min_dist=",databasea$results$res_umapdistmatrix[[i]]$min_dist), xlab="overlap", fitmethod = fitmethod,xlim=c(-0.1,1.1), breaks=120)
 
-  create_histo(x=sub_overlap_kmeanwithdendo[i,],main=paste0("overlap of kmeans on umap vs hierarchical=",databasea$results$res_umapdistmatrix[[i]]$kvalue," min_dist=",databasea$results$res_umapdistmatrix[[i]]$min_dist), xlab="overlap", fitmethod = "gauspeak",xlim=c(-0.1,1.1), breaks=120)
+  create_histo(x=sub_overlap_kmeanwithdendo[i,],main=paste0("overlap of kmeans on umap vs hierarchical=",databasea$results$res_umapdistmatrix[[i]]$kvalue," min_dist=",databasea$results$res_umapdistmatrix[[i]]$min_dist), xlab="overlap", fitmethod = NULL,xlim=c(-0.1,1.1), breaks=120)
 }
 
 cat("done, output file=",outputfile)

@@ -32,7 +32,7 @@ for file in "$FOLDER"/*.rds; do
   while [[ $(jobs -r -p | wc -l) -ge $MAX_JOBS ]]; do
     sleep 1
   done
-done
+done  
 
 wait
 echo "done"
