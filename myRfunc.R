@@ -191,35 +191,39 @@ single_sample_analisys<-function(filename, clusnum, noprint, txtoutfilename, new
   }
 
   #UMAP analysis 0<kmin<180, 0<min_dist<0.99
-k_vals  <- c(10, 15, 15, 30)
-min_vals <- c(0.05, 0.1, 0.3, 0.1)
+k_vals  <- c(10, 20, 30, 40, 50, 60, 70, 80)
+min_vals <- c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
 
 res_umapdistmatrix<-vector("list", length(k_vals))
 mean_ari_kmeans_umap <- 0
 mean_ami_kmeans_umap <- 0
 mean_overlap_kmeans_umap<-0
+counter<-0
 for (i in seq_along(k_vals)) {
-  res<-umap_from_distmatrix(
-    distmatrix_mat = distmatrix_mat,
-    dendo_cut = dendo_cut,
-    dendo = database$results$dendo,
-    kvalue = k_vals[i],
-    min_dist = min_vals[i],
-    iskmeans = iskmeans,
-    plot_result = plot_result,
-    clusnum = clusnum,
-    distinputmatrix = dendomap,
-    title=paste0("UMAP from distance matrix (k=", k_vals[i], ", min_dist=", min_vals[i], ")"),
-    txtoutfilename=txtoutfilename
-  )
-  res_umapdistmatrix[[i]] <- res
-  mean_ari_kmeans_umap <- mean_ari_kmeans_umap+res$compare_res$ARI
-  mean_ami_kmeans_umap <- mean_ami_kmeans_umap+res$compare_res$AMI
-  mean_overlap_kmeans_umap <- mean_overlap_kmeans_umap+res$compare_res$overlap
+  for (j in seq_along(min_vals)) {
+    res<-umap_from_distmatrix(
+      distmatrix_mat = distmatrix_mat,
+      dendo_cut = dendo_cut,
+      dendo = database$results$dendo,
+      kvalue = k_vals[i],
+      min_dist = min_vals[j],
+      iskmeans = iskmeans,
+      plot_result = plot_result,
+      clusnum = clusnum,
+      distinputmatrix = dendomap,
+      title=paste0("UMAP from distance matrix (k=", k_vals[i], ", min_dist=", min_vals[i], ")"),
+      txtoutfilename=txtoutfilename
+    )
+    counter<-counter+1
+    res_umapdistmatrix[[counter]] <- res
+    mean_ari_kmeans_umap <- mean_ari_kmeans_umap+res$compare_res$ARI
+    mean_ami_kmeans_umap <- mean_ami_kmeans_umap+res$compare_res$AMI
+    mean_overlap_kmeans_umap <- mean_overlap_kmeans_umap+res$compare_res$overlap
+  }
 }
-avg_ami_kmeans_umap<-mean_ami_kmeans_umap/length(k_vals)
-avg_ari_kmeans_umap<-mean_ari_kmeans_umap/length(k_vals)
-avg_overlap_kmeans_umap<-mean_overlap_kmeans_umap/length(k_vals)
+avg_ami_kmeans_umap<-mean_ami_kmeans_umap/counter
+avg_ari_kmeans_umap<-mean_ari_kmeans_umap/counter
+avg_overlap_kmeans_umap<-mean_overlap_kmeans_umap/counter
 cat("mean ami and ari and overlap across all UMAP k and min_dist combinations:\n", file=txtoutfilename,append=TRUE)
 cat("mean ami:", avg_ami_kmeans_umap, "mean ari:", avg_ari_kmeans_umap, "mean overlap:", avg_overlap_kmeans_umap, "\n", file=txtoutfilename,append=TRUE)
 database$results$res_umapdistmatrix<-res_umapdistmatrix
