@@ -12,8 +12,8 @@
 # done
 #!/bin/bash
 
-FOLDER="results/subsample_10_1000_shotgun_5clus_spearman_average"
-MAX_JOBS=3
+FOLDER="results/subsample_10_1000_shotgun_5clus_correlation_average"
+MAX_JOBS=10
 
 mkdir -p "$FOLDER/logs"
 

@@ -18,7 +18,6 @@ library(gplots)
 source("myRfunc.R", keep.source = TRUE)
 options(error=function() { traceback(2); if(!interactive()) quit("no", status = 1, runLast = FALSE) })
 
-
 comparefolder<-function(debug=0,clusnum=0, metrics=NULL, folder=NULL, reffile=NULL, isfam=FALSE, isshotgun=TRUE){
 set.seed(123)
 
@@ -190,7 +189,7 @@ cat(paste0(metrics," k= ",clusnum," ", mean(overlap_dendoclus),"\n"),file=first_
 cat(paste0(metrics," k= ",clusnum," ", mean(ami_dendoclus),"\n"),file=first_main_plot_amihierarchical_vs_k_all_metrics ,append=TRUE)
 cat(paste0(metrics," k= ",clusnum," ", mean(ari_dendoclus),"\n"),file=first_main_plot_arihierarchical_vs_k_all_metrics ,append=TRUE)
 
-cat(paste0(metrics," k= ",clusnum," overlap= ", mean(overlap_dendoclus)," ami= ",mean(ami_dendoclus)," ari= ",mean(ari_dendoclus) ),file=second_main_plot_all_metrics ,append=TRUE)
+cat(paste0(metrics," k= ",clusnum," overlap= ", mean(overlap_dendoclus)," ami= ",mean(ami_dendoclus)," ari= ",mean(ari_dendoclus),"\n" ),file=second_main_plot_all_metrics ,append=TRUE)
 
 #scrivo file per plot con metriche su umap
 for (i in seq_along(databasea$results$res_umapdistmatrix)) {
@@ -207,6 +206,10 @@ cat("done, output file=",outputfile)
 dev.off()
 
 }
+
+comparefolder(debug=0,clusnum=5, metrics="spearman_average", folder="results/subsample_10_1000_shotgun_5clus_spearman_average", reffile="results/spearman_average_shotgun/out_create_dismatrix_spearman_average_NOWHITE_CZM_iscore_isclr_isrelab_shotgun_clusnum5_analysis.RDS", isfam=FALSE, isshotgun=TRUE)
+# comparefolder(debug=0,clusnum=2, metrics="euclidean_wardd2", folder="mountemicrain/mounthpc/subsample_10_1000_shotgun_2clus_euclidean_wardd2", reffile="mountemicrain/mounthpc/euclidean_wardd2_shotgun/out_create_dismatrix_euclidean_ward.D2_NOWHITE_CZM_iscore_isclr_isrelab_shotgun_clusnum2_analysis.RDS", isfam=FALSE, isshotgun=TRUE)
+
 
 
 

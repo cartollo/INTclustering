@@ -27,10 +27,10 @@ inputfile<-"/share/project4/home/dongyunsheng/EMICRAIN/Datasets/Microlearner/HNC
 #pe fare subsamples
 for (i in 1:1000){
   label<-paste0("_seed", i)
-  create_db(seed=i, clusnum=0, distance="spearman", clus_method="average", iscore=TRUE, isweighted=FALSE, isclr=TRUE, ispca=FALSE, ispcoa=FALSE, isrelab=TRUE, whitemethod="NOWHITE", zeroimpmethod="CZM", iscreatedatabase=FALSE, inputfile=inputfile, isfam=FALSE, subsample_size=163, outputfilelable = label, folderoutput="results/subsample_10_1000_shotgun_2clus_spearman_average")
+  create_db(seed=i, clusnum=0, distance="correlation", clus_method="average", iscore=TRUE, isweighted=FALSE, isclr=TRUE, ispca=FALSE, ispcoa=FALSE, isrelab=TRUE, whitemethod="NOWHITE", zeroimpmethod="CZM", iscreatedatabase=FALSE, inputfile=inputfile, isfam=FALSE, subsample_size=163, outputfilelable = label, folderoutput="results/subsample_10_1000_shotgun_2clus_correlation_average")
 }
 
   
 # se caso singolo senza subsample
-# create_db(clusnum=0, distance="spearman", clus_method="average", iscore=TRUE, isweighted=FALSE, isclr=TRUE, ispca=FALSE, ispcoa=FALSE, isrelab=TRUE, whitemethod="NOWHITE", zeroimpmethod="CZM", iscreatedatabase=FALSE, inputfile=inputfile, isfam=FALSE, folderoutput="results/spearman_average_shotgun")
+# create_db(clusnum=0, distance="correlation", clus_method="average", iscore=TRUE, isweighted=FALSE, isclr=TRUE, ispca=FALSE, ispcoa=FALSE, isrelab=TRUE, whitemethod="NOWHITE", zeroimpmethod="CZM", iscreatedatabase=FALSE, inputfile=inputfile, isfam=FALSE, folderoutput="results/correlation_average_shotgun")
 
