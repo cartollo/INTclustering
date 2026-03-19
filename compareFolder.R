@@ -19,11 +19,12 @@ source("myRfunc.R", keep.source = TRUE)
 options(error=function() { traceback(2); if(!interactive()) quit("no", status = 1, runLast = FALSE) })
 
 
-comparefolder<-function(debug=0,clusnum=0, metrics=NULL, reffile=NULL, isfam=FALSE, isshotgun=TRUE){
+comparefolder<-function(debug=0,clusnum=0, metrics=NULL, folder=NULL, reffile=NULL, isfam=FALSE, isshotgun=TRUE){
 set.seed(123)
 
 #ouput file
-if(reffile==NULL){
+if(is.null(reffile) || is.null(folder) || is.null(metrics)){
+# if(FALSE){
   if(isfam){
     folder<-"results/subsample_10_1000_correlation_average_16S_3clus_fam"
     reffile<-"results/correlation_average_NOWHITE_CZM_isclr_isfam/out_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_isclr_isfam_clusnum3_analysis.RDS"
@@ -34,7 +35,7 @@ if(reffile==NULL){
   }
   if(isshotgun){
     # folder<-"results/subsample_10_1000_shotgun_3clus_correlation_average/"
-    folder<-paste0("results/subsample_10_1000_shotgun_"clusnum"clus_"metrics)
+    folder<-paste0("results/subsample_10_1000_shotgun_",clusnum,"clus_",metrics)
     # folder<-"results/subsample_10_1000_euclidean_wardd2_3clus_shotgun"
     # reffile<-"results/euclidean_ward.D2_NOWHITE_CZM_isclr_shotgun/out_create_dismatrix_euclidean_ward.D2_NOWHITE_CZM_iscore_isclr_isrelab_shotgun_clusnum3_analysis.RDS"
     # reffile<-"results/correlation_average_NOWHITE_CZM_isclr_shotgun/out_create_dismatrix_correlation_average_NOWHITE_CZM_iscore_isclr_shotgun_clusnum3_analysis.RDS"
@@ -49,7 +50,7 @@ if(isshotgun)
   label<-"shotgun"
 if(isfam)
   label<-"isfam"
-outputfile<-paste0(folder,"/","comparefolderouput_"metrics"_"label"_clusnum_",clusnum,".pdf")
+outputfile<-paste0(folder,"/","comparefolderouput_",metrics,"_",label,"_clusnum_",clusnum,".pdf")
 
 pdf(file = outputfile) 
 first_main_plot_overlaphierarchical_vs_k_all_metrics<-paste0("first_main_plot_overlaphierarchical_vs_k_all_metrics.txt")
@@ -57,9 +58,7 @@ first_main_plot_amihierarchical_vs_k_all_metrics<-paste0("first_main_plot_amihie
 first_main_plot_arihierarchical_vs_k_all_metrics<-paste0("first_main_plot_arihierarchical_vs_k_all_metrics.txt")
 #first_main_plot_overlapkmeans_vs_k_all_metrics<-c() #serve lista perchè è per ogni combinazione di kval e mindist
 second_main_plot_all_metrics<-paste0("second_main_plot_all_metrics_clusnum_",clusnum,".txt")#ci devo mettere ami,ari,overlap su hierarchico e poi per ogni combinazione di kval e mindist, fatto per ogni metrica
-supp_heatmap_ami<-paste0("supp_heatmap_ari_",metrics,"_clusnum",clusnum,".txt") 
-supp_heatmap_ari<-paste0("supp_heatmap_ami_",metrics,"_clusnum",clusnum,".txt") 
-supp_heatmap_overlap<-paste0("supp_heatmap_overlap_",metrics,"_clusnum",clusnum,".txt") 
+supp_heatmap<-paste0("supp_heatmap",metrics,"_clusnum",clusnum,".txt") 
 
 databasea <- readRDS(reffile)
 txtoutfilename<-NULL
@@ -195,12 +194,12 @@ cat(paste0(metrics," k= ",clusnum," overlap= ", mean(overlap_dendoclus)," ami= "
 
 #scrivo file per plot con metriche su umap
 for (i in seq_along(databasea$results$res_umapdistmatrix)) {
-  cat(paste0(metrics," k= ",clusnum," ", mean(overlap_kmean[i,]),"\n"),file= paste0("first_main_plot_overlapkmeans_vs_k_all_metrics_kval_",databasea$results$res_umapdistmatrix[[i]]$kvalue"_min_dist_",databasea$results$res_umapdistmatrix[[i]]$min_dist,".txt"),append=TRUE)
-  cat(paste0(metrics," k= ",clusnum," ", mean(ami_kmean[i,]),"\n"),file= paste0("first_main_plot_amikmeans_vs_k_all_metrics_kval_",databasea$results$res_umapdistmatrix[[i]]$kvalue"_min_dist_",databasea$results$res_umapdistmatrix[[i]]$min_dist,".txt"),append=TRUE)
-  cat(paste0(metrics," k= ",clusnum," ", mean(ari_kmean[i,]),"\n"),file= paste0("first_main_plot_arikmeans_vs_k_all_metrics_kval_",databasea$results$res_umapdistmatrix[[i]]$kvalue"_min_dist_",databasea$results$res_umapdistmatrix[[i]]$min_dist,".txt"),append=TRUE)
+  cat(paste0(metrics," k= ",clusnum," ", mean(overlap_kmean[i,]),"\n"),file= paste0("first_main_plot_overlapkmeans_vs_k_all_metrics_kval_",databasea$results$res_umapdistmatrix[[i]]$kvalue,"_min_dist_",databasea$results$res_umapdistmatrix[[i]]$min_dist,".txt"),append=TRUE)
+  cat(paste0(metrics," k= ",clusnum," ", mean(ami_kmean[i,]),"\n"),file= paste0("first_main_plot_amikmeans_vs_k_all_metrics_kval_",databasea$results$res_umapdistmatrix[[i]]$kvalue,"_min_dist_",databasea$results$res_umapdistmatrix[[i]]$min_dist,".txt"),append=TRUE)
+  cat(paste0(metrics," k= ",clusnum," ", mean(ari_kmean[i,]),"\n"),file= paste0("first_main_plot_arikmeans_vs_k_all_metrics_kval_",databasea$results$res_umapdistmatrix[[i]]$kvalue,"_min_dist_",databasea$results$res_umapdistmatrix[[i]]$min_dist,".txt"),append=TRUE)
 
   cat(paste0(" kval= ",databasea$results$res_umapdistmatrix[[i]]$kvalue, " min_dist= ",databasea$results$res_umapdistmatrix[[i]]$min_dist," overlapkmean= ",mean(overlap_kmean[i,]), " amikmean= ", mean(ami_kmean[i,]), " arikmean= ",mean(ari_kmean[i,])),file=second_main_plot_all_metrics ,append=TRUE)
-  cat(paste0(), file=supp_heatmap, append=TRUE)
+  cat(paste0("kval= ",databasea$results$res_umapdistmatrix[[i]]$kvalue, " min_dist= ",databasea$results$res_umapdistmatrix[[i]]$min_dist," overlapkmean= ",mean(overlap_kmean[i,]), " amikmean= ", mean(ami_kmean[i,]), " arikmean= ",mean(ari_kmean[i,]),"\n"),file=supp_heatmap ,append=TRUE)
 }
 
 cat("done, output file=",outputfile)
