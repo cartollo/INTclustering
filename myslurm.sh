@@ -23,6 +23,7 @@
 # specify conda env 
 # eval "$(/share/project4/home/dongyunsheng/myprograms/micromamba shell hook -s bash)"
 # micromamba activate r_env
+./myprograms/micromamba activate r_env
 # specify the script 
 
 bash myscript_compDisMatrix_folderUnix.sh

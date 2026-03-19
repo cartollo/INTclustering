@@ -684,7 +684,7 @@ create_histo<-function(x, main, xlab, ylab=NULL, breaks=20, fitmethod=NULL, xlim
   stdvalue<-sd(x)
   lengthvalue<-length(x)
   abline(v = meanvalue, lty = 2)
-  legend("topright", legend = c(paste(formatC(lengthvalue,format="e",digits=2),":Entries"),paste(formatC(meanvalue, format="e", digits=2),":Mean" ),paste(formatC(stdvalue, format="e",digits=2),":Dev std")))
+  legend("topright", legend = c(paste(formatC(lengthvalue,format="e",digits=2),":Entries"),paste(formatC(meanvalue, format="e", digits=2),":Mean" ))))
   if(length(fitmethod)>0){
     if(fitmethod=="gaus"){
       fittedhisto<-fit_histo(h=histo,  formula=y ~ gauss_fun(x, A, mu, sigma), start_vals=list(A=lengthvalue,mu = meanvalue, sigma= stdvalue))
